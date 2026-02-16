@@ -124,13 +124,13 @@ render();
 </script>
 <script>
 const SUPABASE_URL = 'https://bbsldtgusmjpulohxzpa.supabase.co';const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJic2xkdGd1c21qcHVsb2h4enBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwNTAyNzQsImV4cCI6MjA4NTYyNjI3NH0.wnRJpsDrXn2dRqQQsGVzToAeauxZgboPiXPxRc-5Xq8';const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);let failedLogins = 0;const PILLARS = [
-{ id: 'operations', label: 'Operations', loader: loadOperations },
+{ id: 'operations', label: 'Operations', loader: 'loadOperations' },
 { id: 'sales', label: 'Sales', loader: null },
 { id: 'marketing', label: 'Marketing', loader: null },
 { id: 'leadership', label: 'Leadership', loader: null },
 { id: 'finance', label: 'Finance', loader: null },
 { id: 'legal', label: 'Legal', loader: null },
-{ id: 'system', label: 'System', loader: loadSystem },
+{ id: 'system', label: 'System', loader: 'loadSystem' },
 ];let activePillar = 'operations';async function doLogin() {
 const email = document.getElementById('email').value.trim();const pw = document.getElementById('password').value;const errEl = document.getElementById('login-error');const btn = document.getElementById('login-btn');errEl.style.display = 'none';if (!email || !pw) { errEl.textContent = 'Email and password required.'; errEl.style.display = 'block'; return; }
 btn.disabled = true; btn.textContent = 'Signing in...';try {
@@ -163,7 +163,7 @@ const tab = document.createElement('div');tab.className = 'nav-tab' + (p.id === 
 }
 function navigateTo(pillarId) {
 activePillar = pillarId;renderNav();const content = document.getElementById('pillar-content');content.innerHTML = '';const pillar = PILLARS.find(p => p.id === pillarId);if (pillar && pillar.loader) {
-pillar.loader(content);
+const fn = typeof pillar.loader === 'string' ? window[pillar.loader] : pillar.loader;if (typeof fn === 'function') { fn(content); } else { content.innerHTML = '<div class="placeholder-pillar"><h2>' + escapeHtml(pillar.label) + '<\/h2><p>Loader not found: ' + escapeHtml(pillar.loader) + '<\/p><\/div>'; }
 } else {
 content.innerHTML = '<div class="placeholder-pillar"><h2>' + escapeHtml(pillar.label) + '<\/h2><p>Coming in Phase 2<\/p><\/div>';
 }
