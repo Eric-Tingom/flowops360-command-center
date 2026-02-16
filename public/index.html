@@ -58,13 +58,13 @@ function escapeHtml(str) {
 if (str == null) return '';return String(str).replace(/&/g,'&amp;').replace(/\x3c/g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 function formatDate(d) {
-if (!d) return '—';const dt = new Date(d);if (isNaN(dt)) return '—';return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+if (!d) return '\u2014';const dt = new Date(d);if (isNaN(dt)) return '\u2014';return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 function formatTime(d) {
-if (!d) return '—';const dt = new Date(d);if (isNaN(dt)) return '—';return dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Phoenix' });
+if (!d) return '\u2014';const dt = new Date(d);if (isNaN(dt)) return '\u2014';return dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Phoenix' });
 }
 function formatCurrency(n) {
-if (n == null) return '—';return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+if (n == null) return '\u2014';return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 function daysAgo(d) {
 if (!d) return null;const diff = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);return diff;
@@ -78,7 +78,7 @@ now: 'badge-error', in_review: 'badge-warning', next: 'badge-info',
 new: 'badge-muted', waiting: 'badge-warning', in_queue: 'badge-info',
 pending: 'badge-warning', healthy: 'badge-success', critical: 'badge-error',
 stale: 'badge-warning', warning: 'badge-warning',
-};const cls = map[status] || 'badge-muted';return '<span class="badge ' + cls + '">' + escapeHtml(status || '—') + '<\/span>';
+};const cls = map[status] || 'badge-muted';return '<span class="badge ' + cls + '">' + escapeHtml(status || '\u2014') + '<\/span>';
 }
 function clientBadge(name) {
 if (!name) return '<span class="badge badge-muted">Unknown<\/span>';return '<span class="badge badge-info">' + escapeHtml(name) + '<\/span>';
@@ -100,7 +100,7 @@ const total = filtered.length;const pages = Math.ceil(total / pageSize) || 1;if 
 html += '<div class="filter-bar"><input type="text" placeholder="Search..." value="' + escapeHtml(filterText) + '" onkeyup="window._tblFilter_' + containerId + '(this.value)"><\/div>';
 }
 html += '<table class="data-table"><thead><tr>';columns.forEach(c => {
-const isSorted = sortCol === c.key;const arrow = isSorted ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▴';html += '<th class="' + (isSorted ? 'sorted' : '') + '" onclick="window._tblSort_' + containerId + '('' + c.key + '')">' + escapeHtml(c.label) + '<span class="sort-icon">' + arrow + '<\/span><\/th>';
+const isSorted = sortCol === c.key;const arrow = isSorted ? (sortDir === 'asc' ? ' \u25B2' : ' \u25BC') : ' \u25B4';html += '<th class="' + (isSorted ? 'sorted' : '') + '" onclick="window._tblSort_' + containerId + '(\'' + c.key + '\')">' + escapeHtml(c.label) + '<span class="sort-icon">' + arrow + '<\/span><\/th>';
 });html += '<\/tr><\/thead><tbody>';if (pageRows.length === 0) {
 html += '<tr><td colspan="' + columns.length + '" style="text-align:center;color:var(--text-dim);padding:1rem">No results<\/td><\/tr>';
 } else {
@@ -328,7 +328,7 @@ const filtered = errorsOnly ? logs.filter(l => l.status_code !== 200 || l.timed_
 html += '<tr><td colspan="4" style="text-align:center;color:var(--text-dim)">No entries<\/td><\/tr>';
 } else {
 filtered.forEach(l => {
-const isErr = l.status_code !== 200 || l.timed_out || l.error_msg;const statusHtml = l.timed_out ? '<span class="badge badge-error">Timeout<\/span>' : l.status_code ? (l.status_code === 200 ? '<span class="badge badge-success">200<\/span>' : '<span class="badge badge-error">' + l.status_code + '<\/span>') : '<span class="badge badge-muted">—<\/span>';const errMsg = l.error_msg ? escapeHtml(l.error_msg.substring(0,80)) : '—';html += '<tr><td>' + l.id + '<\/td><td>' + statusHtml + '<\/td><td>' + errMsg + '<\/td><td style="white-space:nowrap">' + formatDate(l.created) + '<\/td><\/tr>';
+const isErr = l.status_code !== 200 || l.timed_out || l.error_msg;const statusHtml = l.timed_out ? '<span class="badge badge-error">Timeout<\/span>' : l.status_code ? (l.status_code === 200 ? '<span class="badge badge-success">200<\/span>' : '<span class="badge badge-error">' + l.status_code + '<\/span>') : '<span class="badge badge-muted">\u2014<\/span>';const errMsg = l.error_msg ? escapeHtml(l.error_msg.substring(0,80)) : '\u2014';html += '<tr><td>' + l.id + '<\/td><td>' + statusHtml + '<\/td><td>' + errMsg + '<\/td><td style="white-space:nowrap">' + formatDate(l.created) + '<\/td><\/tr>';
 });
 }
 html += '<\/tbody><\/table>';container.innerHTML = html;
@@ -348,7 +348,7 @@ if (typeFilter) {
 filtered = filtered.filter(a => a.agent_type === typeFilter);
 }
 let html = '<div class="filter-bar">';html += '<input type="text" placeholder="Search agents..." value="' + escapeHtml(searchText) + '" oninput="window._agentSearch(this.value)">';html += '<select onchange="window._agentTypeFilter(this.value)"><option value="">All types<\/option>';types.forEach(t => { html += '<option value="' + escapeHtml(t) + '"' + (typeFilter === t ? ' selected' : '') + '>' + escapeHtml(t) + '<\/option>'; });html += '<\/select>';html += '<span style="color:var(--text-muted);font-size:0.8rem">' + filtered.length + ' agents<\/span>';html += '<\/div>';html += '<table class="data-table"><thead><tr><th>Agent<\/th><th>Type<\/th><th>Brain<\/th><th>Category<\/th><\/tr><\/thead><tbody>';filtered.forEach(a => {
-html += '<tr><td><strong>' + escapeHtml(a.assistant_name) + '<\/strong><br><span style="font-size:0.7rem;color:var(--text-dim)">' + escapeHtml(a.assistant_id) + '<\/span><\/td><td>' + statusBadge(a.agent_type) + '<\/td><td>' + (a.brain ? '<span class="badge badge-info">' + escapeHtml(a.brain) + '<\/span>' : '<span class="badge badge-muted">—<\/span>') + '<\/td><td>' + escapeHtml(a.category || '—') + '<\/td><\/tr>';
+html += '<tr><td><strong>' + escapeHtml(a.assistant_name) + '<\/strong><br><span style="font-size:0.7rem;color:var(--text-dim)">' + escapeHtml(a.assistant_id) + '<\/span><\/td><td>' + statusBadge(a.agent_type) + '<\/td><td>' + (a.brain ? '<span class="badge badge-info">' + escapeHtml(a.brain) + '<\/span>' : '<span class="badge badge-muted">\u2014<\/span>') + '<\/td><td>' + escapeHtml(a.category || '\u2014') + '<\/td><\/tr>';
 });html += '<\/tbody><\/table>';container.innerHTML = html;
 }
 window._agentSearch = function(val) { searchText = val; render(); };window._agentTypeFilter = function(val) { typeFilter = val; render(); };render();
