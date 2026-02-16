@@ -32,65 +32,330 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-function showToast(message, type) {
-type=type||'success';const el = document.createElement('div');el.className = 'toast toast-' + type;el.textContent = message;document.body.appendChild(el);setTimeout(function(){el.remove()}, 3000);
+function showToast(message, type = 'success') {
+const el = document.createElement('div');el.className = 'toast toast-' + type;el.textContent = message;document.body.appendChild(el);setTimeout(() => el.remove(), 3000);
 }
 function createCard(containerId, title, count) {
-var card = document.createElement('div');card.className = 'card';card.id = 'card-' + containerId;var hdr = document.createElement('div');hdr.className = 'card-header';hdr.innerHTML = '<h3>' + escapeHtml(title) + '<\/h3><span class="card-count"><\/span>';var body = document.createElement('div');body.className = 'card-body';body.id = containerId;card.appendChild(hdr);card.appendChild(body);return card;
+const card = document.createElement('div');card.className = 'card';card.id = 'card-' + containerId;const hdr = document.createElement('div');hdr.className = 'card-header';hdr.innerHTML = '<h3>' + escapeHtml(title) + '<\/h3>' + (count != null ? '<span class="card-count">' + count + '<\/span>' : '');const body = document.createElement('div');body.className = 'card-body';body.id = containerId;card.appendChild(hdr);card.appendChild(body);return card;
 }
-function cardLoading(id) {var el = document.getElementById(id);if(el)el.innerHTML = '<div class="shimmer" style="width:80%"><\/div><div class="shimmer" style="width:60%"><\/div><div class="shimmer" style="width:70%"><\/div>';}
-function cardSuccess(id, html) {var el = document.getElementById(id);if(el)el.innerHTML = html;}
-function cardEmpty(id, msg) {var el = document.getElementById(id);if(el)el.innerHTML = '<div class="card-empty">' + escapeHtml(msg||'No data') + '<\/div>';}
-function cardError(id, msg, fn) {var el = document.getElementById(id);if(!el)return;el.innerHTML = '<div class="card-error"><p>' + escapeHtml(msg) + '<\/p>' + (fn ? '<button class="btn-retry" onclick="' + fn + '()">Retry<\/button>' : '') + '<\/div>';}
-function updateCardCount(id, c) {var card = document.getElementById('card-' + id);if(!card)return;var b = card.querySelector('.card-count');if(b)b.textContent = c;}
-function escapeHtml(s) {if(s==null)return'';return String(s).replace(/&/g,'&amp;').replace(/\x3c/g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function formatDate(d) {if(!d)return'—';var dt=new Date(d);if(isNaN(dt))return'—';return dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
-function formatTime(d) {if(!d)return'—';var dt=new Date(d);if(isNaN(dt))return'—';return dt.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/Phoenix'});}
-function formatCurrency(n) {if(n==null)return'—';return'$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});}
-function daysAgo(d) {if(!d)return null;return Math.floor((Date.now()-new Date(d).getTime())/86400000);}
-function staleBadge(days) {if(days==null)return'';if(days>90)return'<span class="badge badge-error">'+days+'d<\/span>';if(days>30)return'<span class="badge badge-warning">'+days+'d<\/span>';if(days>14)return'<span class="badge badge-info">'+days+'d<\/span>';return'<span class="badge badge-muted">'+days+'d<\/span>';}
-function statusBadge(s) {var m={now:'badge-error',in_review:'badge-warning',next:'badge-info','new':'badge-muted',waiting:'badge-warning',in_queue:'badge-info',pending:'badge-warning',healthy:'badge-success',critical:'badge-error',stale:'badge-warning',warning:'badge-warning'};return'<span class="badge '+(m[s]||'badge-muted')+'">'+escapeHtml(s||'—')+'<\/span>';}
-function clientBadge(n) {if(!n)return'<span class="badge badge-muted">Unknown<\/span>';return'<span class="badge badge-info">'+escapeHtml(n)+'<\/span>';}
-function linkIcon(url) {if(!url)return'';return'<a href="'+escapeHtml(url)+'" target="_blank" rel="noopener">↗<\/a>';}
-function renderSortableTable(cid, cols, rows, opts) {
-opts=opts||{};var ps=opts.pageSize||25,cp=0,sc=opts.defaultSort||null,sd=opts.defaultSortDir||'asc',ft='';
-function render(){
-var f=rows;if(ft){var q=ft.toLowerCase();f=rows.filter(function(r){return cols.some(function(c){return String(r[c.key]||'').toLowerCase().indexOf(q)>=0})})}
-if(sc){f=f.slice().sort(function(a,b){var va=a[sc],vb=b[sc];if(va==null)va='';if(vb==null)vb='';if(typeof va==='number'&&typeof vb==='number')return sd==='asc'?va-vb:vb-va;return sd==='asc'?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va))})}
-var tot=f.length,pgs=Math.ceil(tot/ps)||1;if(cp>=pgs)cp=pgs-1;var st=cp*ps,pr=f.slice(st,st+ps),h='';if(rows.length>10)h+='<div class="filter-bar"><input type="text" placeholder="Search..." value="'+escapeHtml(ft)+'" onkeyup="window._tf_'+cid+'(this.value)"><\/div>';h+='<table class="data-table"><thead><tr>';cols.forEach(function(c){var is=sc===c.key,ar=is?(sd==='asc'?' ▲':' ▼'):' ▴';h+='<th class="'+(is?'sorted':'')+'" onclick="window._ts_'+cid+'(''+c.key+'')">' +escapeHtml(c.label)+'<span class="sort-icon">'+ar+'<\/span><\/th>'});h+='<\/tr><\/thead><tbody>';if(!pr.length)h+='<tr><td colspan="'+cols.length+'" style="text-align:center;color:var(--text-dim);padding:1rem">No results<\/td><\/tr>';else pr.forEach(function(r){h+='<tr>';cols.forEach(function(c){h+='<td>'+(c.render?c.render(r):escapeHtml(r[c.key]))+'<\/td>'});h+='<\/tr>'});h+='<\/tbody><\/table>';if(tot>ps)h+='<div class="pagination"><span>'+(st+1)+'-'+Math.min(st+ps,tot)+' of '+tot+'<\/span><div><button '+(cp===0?'disabled':'')+' onclick="window._tp_'+cid+'('+(cp-1)+')">&lt;<\/button> <button '+(cp>=pgs-1?'disabled':'')+' onclick="window._tp_'+cid+'('+(cp+1)+')">&gt;<\/button><\/div><\/div>';cardSuccess(cid,h)}
-window['_ts_'+cid]=function(c){if(sc===c)sd=sd==='asc'?'desc':'asc';else{sc=c;sd='asc'}render()};window['_tf_'+cid]=function(v){ft=v;cp=0;render()};window['_tp_'+cid]=function(p){cp=p;render()};render()}
+function cardLoading(containerId) {
+const el = document.getElementById(containerId);if (!el) return;el.innerHTML = '<div class="shimmer" style="width:80%"><\/div><div class="shimmer" style="width:60%"><\/div><div class="shimmer" style="width:70%"><\/div>';
+}
+function cardSuccess(containerId, html) {
+const el = document.getElementById(containerId);if (!el) return;el.innerHTML = html;
+}
+function cardEmpty(containerId, message) {
+const el = document.getElementById(containerId);if (!el) return;el.innerHTML = '<div class="card-empty">' + escapeHtml(message || 'No data') + '<\/div>';
+}
+function cardError(containerId, message, retryFn) {
+const el = document.getElementById(containerId);if (!el) return;el.innerHTML = '<div class="card-error"><p>' + escapeHtml(message) + '<\/p>' +
+(retryFn ? '<button class="btn-retry" onclick="' + retryFn + '()">Retry<\/button>' : '') + '<\/div>';
+}
+function updateCardCount(containerId, count) {
+const card = document.getElementById('card-' + containerId);if (!card) return;const badge = card.querySelector('.card-count');if (badge) badge.textContent = count;
+}
+function escapeHtml(str) {
+if (str == null) return '';return String(str).replace(/&/g,'&amp;').replace(/\x3c/g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function formatDate(d) {
+if (!d) return '—';const dt = new Date(d);if (isNaN(dt)) return '—';return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function formatTime(d) {
+if (!d) return '—';const dt = new Date(d);if (isNaN(dt)) return '—';return dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Phoenix' });
+}
+function formatCurrency(n) {
+if (n == null) return '—';return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+function daysAgo(d) {
+if (!d) return null;const diff = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);return diff;
+}
+function staleBadge(days) {
+if (days == null) return '';if (days > 90) return '<span class="badge badge-error">' + days + 'd<\/span>';if (days > 30) return '<span class="badge badge-warning">' + days + 'd<\/span>';if (days > 14) return '<span class="badge badge-info">' + days + 'd<\/span>';return '<span class="badge badge-muted">' + days + 'd<\/span>';
+}
+function statusBadge(status) {
+const map = {
+now: 'badge-error', in_review: 'badge-warning', next: 'badge-info',
+new: 'badge-muted', waiting: 'badge-warning', in_queue: 'badge-info',
+pending: 'badge-warning', healthy: 'badge-success', critical: 'badge-error',
+stale: 'badge-warning', warning: 'badge-warning',
+};const cls = map[status] || 'badge-muted';return '<span class="badge ' + cls + '">' + escapeHtml(status || '—') + '<\/span>';
+}
+function clientBadge(name) {
+if (!name) return '<span class="badge badge-muted">Unknown<\/span>';return '<span class="badge badge-info">' + escapeHtml(name) + '<\/span>';
+}
+function linkIcon(url) {
+if (!url) return '';return '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener">&#8599;<\/a>';
+}
+function renderSortableTable(containerId, columns, rows, opts) {
+opts = opts || {};const pageSize = opts.pageSize || 25;let currentPage = 0;let sortCol = opts.defaultSort || null;let sortDir = opts.defaultSortDir || 'asc';let filterText = '';function render() {
+let filtered = rows;if (filterText) {
+const q = filterText.toLowerCase();filtered = rows.filter(r => columns.some(c => String(r[c.key] || '').toLowerCase().includes(q)));
+}
+if (sortCol) {
+filtered = [...filtered].sort((a, b) => {
+let va = a[sortCol], vb = b[sortCol];if (va == null) va = '';if (vb == null) vb = '';if (typeof va === 'number' && typeof vb === 'number') return sortDir === 'asc' ? va - vb : vb - va;return sortDir === 'asc' ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+});
+}
+const total = filtered.length;const pages = Math.ceil(total / pageSize) || 1;if (currentPage >= pages) currentPage = pages - 1;const start = currentPage * pageSize;const pageRows = filtered.slice(start, start + pageSize);let html = '';if (rows.length > 10) {
+html += '<div class="filter-bar"><input type="text" placeholder="Search..." value="' + escapeHtml(filterText) + '" onkeyup="window._tblFilter_' + containerId + '(this.value)"><\/div>';
+}
+html += '<table class="data-table"><thead><tr>';columns.forEach(c => {
+const isSorted = sortCol === c.key;const arrow = isSorted ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▴';html += '<th class="' + (isSorted ? 'sorted' : '') + '" onclick="window._tblSort_' + containerId + '('' + c.key + '')">' + escapeHtml(c.label) + '<span class="sort-icon">' + arrow + '<\/span><\/th>';
+});html += '<\/tr><\/thead><tbody>';if (pageRows.length === 0) {
+html += '<tr><td colspan="' + columns.length + '" style="text-align:center;color:var(--text-dim);padding:1rem">No results<\/td><\/tr>';
+} else {
+pageRows.forEach(r => {
+html += '<tr>';columns.forEach(c => {
+const val = c.render ? c.render(r) : escapeHtml(r[c.key]);html += '<td>' + val + '<\/td>';
+});html += '<\/tr>';
+});
+}
+html += '<\/tbody><\/table>';if (total > pageSize) {
+html += '<div class="pagination"><span>' + (start + 1) + '-' + Math.min(start + pageSize, total) + ' of ' + total + '<\/span><div>';html += '<button ' + (currentPage === 0 ? 'disabled' : '') + ' onclick="window._tblPage_' + containerId + '(' + (currentPage - 1) + ')">Prev<\/button> ';html += '<button ' + (currentPage >= pages - 1 ? 'disabled' : '') + ' onclick="window._tblPage_' + containerId + '(' + (currentPage + 1) + ')">Next<\/button>';html += '<\/div><\/div>';
+}
+cardSuccess(containerId, html);
+}
+window['_tblSort_' + containerId] = function(col) {
+if (sortCol === col) sortDir = sortDir === 'asc' ? 'desc' : 'asc';else { sortCol = col; sortDir = 'asc'; }
+render();
+};window['_tblFilter_' + containerId] = function(val) { filterText = val; currentPage = 0; render(); };window['_tblPage_' + containerId] = function(p) { currentPage = p; render(); };render();
+}
 
 </script>
 <script>
-var SB_URL='https://bbsldtgusmjpulohxzpa.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJic2xkdGd1c21qcHVsb2h4enBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwNTAyNzQsImV4cCI6MjA4NTYyNjI3NH0.wnRJpsDrXn2dRqQQsGVzToAeauxZgboPiXPxRc-5Xq8',sb=supabase.createClient(SB_URL,SB_KEY),fails=0;
-var PILLARS=[{id:'operations',label:'Operations',loader:loadOperations},{id:'sales',label:'Sales',loader:null},{id:'marketing',label:'Marketing',loader:null},{id:'leadership',label:'Leadership',loader:null},{id:'finance',label:'Finance',loader:null},{id:'legal',label:'Legal',loader:null},{id:'system',label:'System',loader:loadSystem}],active='operations';
-async function doLogin(){var em=document.getElementById('email').value.trim(),pw=document.getElementById('password').value,err=document.getElementById('login-error'),btn=document.getElementById('login-btn');err.style.display='none';if(!em||!pw){err.textContent='Email and password required.';err.style.display='block';return}btn.disabled=true;btn.textContent='Signing in...';try{var r=await sb.auth.signInWithPassword({email:em,password:pw});if(r.error){fails++;err.textContent=r.error.message&&r.error.message.indexOf('Invalid login credentials')>=0?'Invalid email or password.':fails>=3?'Auth may not be configured. Contact admin.':r.error.message||'Login failed.';err.style.display='block';btn.disabled=false;btn.textContent='Sign In';return}showDash(r.data.user)}catch(e){err.textContent='Unable to connect.';err.style.display='block';btn.disabled=false;btn.textContent='Sign In'}}
-async function doLogout(){await sb.auth.signOut();document.getElementById('dashboard').style.display='none';document.getElementById('login-screen').style.display='flex';document.getElementById('password').value='';document.getElementById('login-error').style.display='none'}
-function showDash(u){document.getElementById('login-screen').style.display='none';document.getElementById('dashboard').style.display='block';document.getElementById('user-email').textContent=u.email;renderNav();navTo('operations')}
-function renderNav(){var n=document.getElementById('nav-tabs');n.innerHTML='';PILLARS.forEach(function(p){var t=document.createElement('div');t.className='nav-tab'+(p.id===active?' active':'');t.textContent=p.label;t.onclick=function(){navTo(p.id)};n.appendChild(t)})}
-function navTo(pid){active=pid;renderNav();var c=document.getElementById('pillar-content');c.innerHTML='';var p=PILLARS.find(function(x){return x.id===pid});if(p&&p.loader)p.loader(c);else c.innerHTML='<div class="placeholder-pillar"><h2>'+escapeHtml(p.label)+'<\/h2><p>Coming in Phase 2<\/p><\/div>'}
-async function hErr(cid,rpc,e,fn){if(e&&(e.code==='PGRST301'||(e.message&&e.message.indexOf('JWT')>=0))){showToast('Session expired','error');await doLogout();return}console.error({card:cid,rpc:rpc,err:e&&e.message,ts:new Date().toISOString()});cardError(cid,e&&e.message||'Failed to load',fn)}
-(async function(){var s=await sb.auth.getSession();if(s.data.session&&s.data.session.user)showDash(s.data.session.user);sb.auth.onAuthStateChange(function(ev){if(ev==='SIGNED_OUT'){document.getElementById('dashboard').style.display='none';document.getElementById('login-screen').style.display='flex'}})})();
+const SUPABASE_URL = 'https://bbsldtgusmjpulohxzpa.supabase.co';const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJic2xkdGd1c21qcHVsb2h4enBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwNTAyNzQsImV4cCI6MjA4NTYyNjI3NH0.wnRJpsDrXn2dRqQQsGVzToAeauxZgboPiXPxRc-5Xq8';const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);let failedLogins = 0;const PILLARS = [
+{ id: 'operations', label: 'Operations', loader: loadOperations },
+{ id: 'sales', label: 'Sales', loader: null },
+{ id: 'marketing', label: 'Marketing', loader: null },
+{ id: 'leadership', label: 'Leadership', loader: null },
+{ id: 'finance', label: 'Finance', loader: null },
+{ id: 'legal', label: 'Legal', loader: null },
+{ id: 'system', label: 'System', loader: loadSystem },
+];let activePillar = 'operations';async function doLogin() {
+const email = document.getElementById('email').value.trim();const pw = document.getElementById('password').value;const errEl = document.getElementById('login-error');const btn = document.getElementById('login-btn');errEl.style.display = 'none';if (!email || !pw) { errEl.textContent = 'Email and password required.'; errEl.style.display = 'block'; return; }
+btn.disabled = true; btn.textContent = 'Signing in...';try {
+const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });if (error) {
+failedLogins++;if (error.message && error.message.includes('Invalid login credentials')) {
+errEl.textContent = 'Invalid email or password.';
+} else if (failedLogins >= 3) {
+errEl.textContent = 'Authentication may not be configured. Contact admin.';
+} else {
+errEl.textContent = error.message || 'Login failed.';
+}
+errEl.style.display = 'block';btn.disabled = false; btn.textContent = 'Sign In';return;
+}
+showDashboard(data.user);
+} catch (e) {
+errEl.textContent = 'Unable to connect. Check your network.';errEl.style.display = 'block';btn.disabled = false; btn.textContent = 'Sign In';
+}
+}
+async function doLogout() {
+await sb.auth.signOut();document.getElementById('dashboard').style.display = 'none';document.getElementById('login-screen').style.display = 'flex';document.getElementById('password').value = '';document.getElementById('login-error').style.display = 'none';
+}
+function showDashboard(user) {
+document.getElementById('login-screen').style.display = 'none';document.getElementById('dashboard').style.display = 'block';document.getElementById('user-email').textContent = user.email;renderNav();navigateTo('operations');
+}
+function renderNav() {
+const nav = document.getElementById('nav-tabs');nav.innerHTML = '';
+PILLARS.forEach(p => {
+const tab = document.createElement('div');tab.className = 'nav-tab' + (p.id === activePillar ? ' active' : '');tab.textContent = p.label;tab.onclick = () => navigateTo(p.id);nav.appendChild(tab);
+});
+}
+function navigateTo(pillarId) {
+activePillar = pillarId;renderNav();const content = document.getElementById('pillar-content');content.innerHTML = '';const pillar = PILLARS.find(p => p.id === pillarId);if (pillar && pillar.loader) {
+pillar.loader(content);
+} else {
+content.innerHTML = '<div class="placeholder-pillar"><h2>' + escapeHtml(pillar.label) + '<\/h2><p>Coming in Phase 2<\/p><\/div>';
+}
+}
+function logError(cardId, rpcName, code, message) {
+console.error({ card_id: cardId, rpc_name: rpcName, error_code: code, error_message: message, timestamp: new Date().toISOString() });
+}
+async function handleCardError(containerId, rpcName, error, retryFn) {
+if (error && (error.code === 'PGRST301' || error.message && error.message.includes('JWT'))) {
+showToast('Session expired. Redirecting to login...', 'error');await doLogout();return;
+}
+logError(containerId, rpcName, error?.code || 'UNKNOWN', error?.message || 'Unknown error');cardError(containerId, error?.message || 'Failed to load data', retryFn);
+}
+(async function initApp() {
+const { data: { session } } = await sb.auth.getSession();if (session && session.user) {
+showDashboard(session.user);
+}
+sb.auth.onAuthStateChange((event) => {
+if (event === 'SIGNED_OUT') {
+document.getElementById('dashboard').style.display = 'none';document.getElementById('login-screen').style.display = 'flex';
+}
+});
+})();
 
 </script>
 <script>
-function loadOperations(ct){var g=document.createElement('div');g.className='card-grid';[{id:'now-items',t:'Now Items',l:ldNow},{id:'todays-calendar',t:"Today's Calendar",l:ldCal},{id:'overdue-tickets',t:'Overdue Tickets',l:ldOver},{id:'retainer-billing',t:'Retainer Billing',l:ldBill},{id:'email-triage',t:'Email Triage',l:ldEmail},{id:'carry-forward',t:'Carry Forward',l:ldCarry},{id:'stale-waiting',t:'Stale / Waiting',l:ldStale},{id:'open-tickets',t:'Open Tickets',l:ldOpen},{id:'time-entry',t:'Time Entry',l:ldTime}].forEach(function(c){g.appendChild(createCard(c.id,c.t));c.l()});ct.appendChild(g)}
-async function ldNow(){cardLoading('now-items');try{var r=await sb.rpc('get_standup_now_items');if(r.error){await hErr('now-items','get_standup_now_items',r.error,'ldNow');return}var d=r.data||[];if(!d.length){cardEmpty('now-items','No active now items');return}updateCardCount('now-items',d.length);var h='<table class="data-table"><thead><tr><th>Task<\/th><th>Client<\/th><th>Due<\/th><th><\/th><\/tr><\/thead><tbody>';d.forEach(function(i){h+='<tr><td>'+escapeHtml(i.title)+'<\/td><td>'+clientBadge(i.client_name)+'<\/td><td>'+formatDate(i.due_date)+'<\/td><td>'+linkIcon(i.hubspot_ticket_url)+'<\/td><\/tr>'});h+='<\/tbody><\/table>';cardSuccess('now-items',h)}catch(e){await hErr('now-items','get_standup_now_items',e,'ldNow')}}
-async function ldCal(){cardLoading('todays-calendar');try{var r=await sb.rpc('get_standup_todays_calendar');if(r.error){await hErr('todays-calendar','get_standup_todays_calendar',r.error,'ldCal');return}var d=r.data||[];if(!d.length){cardEmpty('todays-calendar','No meetings today');return}updateCardCount('todays-calendar',d.length);var h='<table class="data-table"><thead><tr><th>Time<\/th><th>Meeting<\/th><th>Client<\/th><\/tr><\/thead><tbody>';d.forEach(function(i){h+='<tr><td style="white-space:nowrap">'+formatTime(i.start_time)+'<\/td><td>'+escapeHtml(i.subject)+'<\/td><td>'+clientBadge(i.client_name)+'<\/td><\/tr>'});h+='<\/tbody><\/table>';cardSuccess('todays-calendar',h)}catch(e){await hErr('todays-calendar','get_standup_todays_calendar',e,'ldCal')}}
-async function ldOver(){cardLoading('overdue-tickets');try{var r=await sb.rpc('get_standup_overdue_tickets');if(r.error){await hErr('overdue-tickets','get_standup_overdue_tickets',r.error,'ldOver');return}var d=r.data;if(!d||!d.by_client||!d.by_client.length){cardEmpty('overdue-tickets','No overdue tickets');return}updateCardCount('overdue-tickets',d.total_overdue+' / '+d.total_open);var h='<div class="kpi-row"><div class="kpi-metric"><div class="kpi-value" style="color:var(--error)">'+d.total_overdue+'<\/div><div class="kpi-label">Overdue<\/div><\/div><div class="kpi-metric"><div class="kpi-value">'+d.total_open+'<\/div><div class="kpi-label">Total Open<\/div><\/div><\/div><table class="data-table" style="margin-top:0.75rem"><thead><tr><th>Client<\/th><th>Count<\/th><th>Sample<\/th><th><\/th><\/tr><\/thead><tbody>';d.by_client.forEach(function(c){var t=c.tickets&&c.tickets[0];h+='<tr><td>'+clientBadge(c.client_name)+'<\/td><td>'+(c.count||(c.tickets?c.tickets.length:0))+'<\/td><td class="truncate">'+escapeHtml(t?t.subject:'—')+'<\/td><td>'+linkIcon(t?t.hubspot_ticket_url:null)+'<\/td><\/tr>'});h+='<\/tbody><\/table>';cardSuccess('overdue-tickets',h)}catch(e){await hErr('overdue-tickets','get_standup_overdue_tickets',e,'ldOver')}}
-async function ldBill(){cardLoading('retainer-billing');try{var r=await sb.rpc('get_standup_retainer_billing');if(r.error){await hErr('retainer-billing','get_standup_retainer_billing',r.error,'ldBill');return}var d=r.data;if(!d||!d.billing||!d.billing.length){cardEmpty('retainer-billing','No retainer data');return}var h='<table class="data-table"><thead><tr><th>Client<\/th><th>Amount<\/th><th>Status<\/th><th>Plan<\/th><th>Done<\/th><\/tr><\/thead><tbody>';d.billing.forEach(function(b){var cap=d.capped_status&&d.capped_status.find(function(c){return c.client_name===b.client_name});var sh=statusBadge(b.invoice_status);if(cap)sh+=' <span class="badge badge-warning">'+cap.hours_used+'/'+cap.included_hours_per_month+'h<\/span>';h+='<tr><td>'+clientBadge(b.client_name)+'<\/td><td>'+formatCurrency(b.retainer_amount)+'<\/td><td>'+sh+'<\/td><td>'+(b.total_items_planned||0)+'<\/td><td>'+(b.total_items_completed||0)+'<\/td><\/tr>'});h+='<\/tbody><\/table>';cardSuccess('retainer-billing',h)}catch(e){await hErr('retainer-billing','get_standup_retainer_billing',e,'ldBill')}}
-async function ldEmail(){cardLoading('email-triage');try{var r=await sb.rpc('get_standup_email_digest');if(r.error){await hErr('email-triage','get_standup_email_digest',r.error,'ldEmail');return}var d=r.data;if(!d||!d.stats){cardEmpty('email-triage','No email data');return}var s=d.stats,h='<div class="kpi-row"><div class="kpi-metric"><div class="kpi-value">'+(s.total_processed||0)+'<\/div><div class="kpi-label">Processed<\/div><\/div><div class="kpi-metric"><div class="kpi-value">'+(s.auto_filed||0)+'<\/div><div class="kpi-label">Auto-Filed<\/div><\/div><div class="kpi-metric"><div class="kpi-value" style="color:'+(s.needs_action>0?'var(--warning)':'var(--success)')+'">'+(s.needs_action||0)+'<\/div><div class="kpi-label">Needs Action<\/div><\/div><div class="kpi-metric"><div class="kpi-value">'+(d.unprocessed||0)+'<\/div><div class="kpi-label">Unprocessed<\/div><\/div><\/div>';if(d.standup_queue&&d.standup_queue.length){h+='<table class="data-table" style="margin-top:0.75rem"><thead><tr><th>Subject<\/th><th>From<\/th><th>Type<\/th><\/tr><\/thead><tbody>';d.standup_queue.forEach(function(e){h+='<tr><td>'+escapeHtml(e.subject)+'<\/td><td>'+escapeHtml(e.sender_email||e.from)+'<\/td><td>'+statusBadge(e.email_type||e.type)+'<\/td><\/tr>'});h+='<\/tbody><\/table>'}cardSuccess('email-triage',h)}catch(e){await hErr('email-triage','get_standup_email_digest',e,'ldEmail')}}
-async function ldCarry(){cardLoading('carry-forward');try{var r=await sb.rpc('get_standup_carry_forward');if(r.error){await hErr('carry-forward','get_standup_carry_forward',r.error,'ldCarry');return}var d=r.data||[];if(!d.length){cardEmpty('carry-forward','Nothing carried forward');return}updateCardCount('carry-forward',d.length);var h='<table class="data-table"><thead><tr><th>Item<\/th><th>Type<\/th><th>Priority<\/th><\/tr><\/thead><tbody>';d.forEach(function(i){h+='<tr><td>'+escapeHtml(i.title||i.detail)+'<\/td><td>'+statusBadge(i.note_type||i.type)+'<\/td><td>'+statusBadge(i.priority)+'<\/td><\/tr>'});h+='<\/tbody><\/table>';cardSuccess('carry-forward',h)}catch(e){await hErr('carry-forward','get_standup_carry_forward',e,'ldCarry')}}
-async function ldStale(){cardLoading('stale-waiting');try{var r=await sb.rpc('get_standup_stale_waiting');if(r.error){await hErr('stale-waiting','get_standup_stale_waiting',r.error,'ldStale');return}var d=r.data||[];if(!d.length){cardEmpty('stale-waiting','Nothing stale or waiting');return}updateCardCount('stale-waiting',d.length);var h='<table class="data-table"><thead><tr><th>Item<\/th><th>Status<\/th><th>Age<\/th><\/tr><\/thead><tbody>';d.forEach(function(i){h+='<tr><td>'+escapeHtml(i.title||i.subject)+'<\/td><td>'+statusBadge(i.status||i.stage)+'<\/td><td>'+staleBadge(i.days_stale||daysAgo(i.last_modified))+'<\/td><\/tr>'});h+='<\/tbody><\/table>';cardSuccess('stale-waiting',h)}catch(e){await hErr('stale-waiting','get_standup_stale_waiting',e,'ldStale')}}
-async function ldOpen(){cardLoading('open-tickets');try{var r=await sb.rpc('get_standup_open_tickets');if(r.error){await hErr('open-tickets','get_standup_open_tickets',r.error,'ldOpen');return}var d=r.data;if(!d||!d.tickets){cardEmpty('open-tickets','No open tickets');return}updateCardCount('open-tickets',d.total);var tix=d.tickets.length>500?d.tickets.slice(0,500):d.tickets;renderSortableTable('open-tickets',[{key:'subject',label:'Subject',render:function(r){return'<span class="truncate" style="display:inline-block">'+escapeHtml(r.subject)+'<\/span> '+linkIcon(r.url)}},{key:'client_name',label:'Client',render:function(r){return clientBadge(r.client_name)}},{key:'stage',label:'Stage',render:function(r){return statusBadge(r.stage)}},{key:'last_modified',label:'Modified',render:function(r){return formatDate(r.last_modified)}}],tix,{defaultSort:'last_modified',defaultSortDir:'desc'})}catch(e){await hErr('open-tickets','get_standup_open_tickets',e,'ldOpen')}}
-function ldTime(){cardEmpty('time-entry','Time entry coming in next deploy')}
+function loadOperations(container) {
+const grid = document.createElement('div');grid.className = 'card-grid';const cards = [
+{ id: 'now-items', title: 'Now Items', loader: loadNowItems },
+{ id: 'todays-calendar', title: "Today's Calendar", loader: loadTodaysCalendar },
+{ id: 'overdue-tickets', title: 'Overdue Tickets', loader: loadOverdueTickets },
+{ id: 'retainer-billing', title: 'Retainer Billing', loader: loadRetainerBilling },
+{ id: 'email-triage', title: 'Email Triage', loader: loadEmailTriage },
+{ id: 'carry-forward', title: 'Carry Forward', loader: loadCarryForward },
+{ id: 'stale-waiting', title: 'Stale / Waiting', loader: loadStaleWaiting },
+{ id: 'open-tickets', title: 'Open Tickets', loader: loadOpenTickets },
+{ id: 'time-entry', title: 'Time Entry', loader: loadTimeEntry },
+];cards.forEach(c => {
+grid.appendChild(createCard(c.id, c.title));c.loader();
+});container.appendChild(grid);
+}
+async function loadNowItems() {
+cardLoading('now-items');try {
+const { data, error } = await sb.rpc('get_standup_now_items');if (error) { await handleCardError('now-items', 'get_standup_now_items', error, 'loadNowItems'); return; }
+const items = data || [];if (items.length === 0) { cardEmpty('now-items', 'No active now items'); return; }
+updateCardCount('now-items', items.length);let html = '<table class="data-table"><thead><tr><th>Task<\/th><th>Client<\/th><th>Due<\/th><th><\/th><\/tr><\/thead><tbody>';items.forEach(i => {
+html += '<tr><td>' + escapeHtml(i.title) + '<\/td><td>' + clientBadge(i.client_name) + '<\/td><td>' + formatDate(i.due_date) + '<\/td><td>' + linkIcon(i.hubspot_ticket_url) + '<\/td><\/tr>';
+});html += '<\/tbody><\/table>';cardSuccess('now-items', html);
+} catch (e) { await handleCardError('now-items', 'get_standup_now_items', e, 'loadNowItems'); }
+}
+async function loadTodaysCalendar() {
+cardLoading('todays-calendar');try {
+const { data, error } = await sb.rpc('get_standup_todays_calendar');if (error) { await handleCardError('todays-calendar', 'get_standup_todays_calendar', error, 'loadTodaysCalendar'); return; }
+const items = data || [];if (items.length === 0) { cardEmpty('todays-calendar', 'No meetings today'); return; }
+updateCardCount('todays-calendar', items.length);let html = '<table class="data-table"><thead><tr><th>Time<\/th><th>Meeting<\/th><th>Client<\/th><\/tr><\/thead><tbody>';items.forEach(i => {
+html += '<tr><td style="white-space:nowrap">' + formatTime(i.start_time) + '<\/td><td>' + escapeHtml(i.subject) + '<\/td><td>' + clientBadge(i.client_name) + '<\/td><\/tr>';
+});html += '<\/tbody><\/table>';cardSuccess('todays-calendar', html);
+} catch (e) { await handleCardError('todays-calendar', 'get_standup_todays_calendar', e, 'loadTodaysCalendar'); }
+}
+async function loadOverdueTickets() {
+cardLoading('overdue-tickets');try {
+const { data, error } = await sb.rpc('get_standup_overdue_tickets');if (error) { await handleCardError('overdue-tickets', 'get_standup_overdue_tickets', error, 'loadOverdueTickets'); return; }
+if (!data || !data.by_client || data.by_client.length === 0) { cardEmpty('overdue-tickets', 'No overdue tickets'); return; }
+updateCardCount('overdue-tickets', data.total_overdue + ' overdue / ' + data.total_open + ' open');let html = '<div class="kpi-row"><div class="kpi-metric"><div class="kpi-value" style="color:var(--error)">' + data.total_overdue + '<\/div><div class="kpi-label">Overdue<\/div><\/div><div class="kpi-metric"><div class="kpi-value">' + data.total_open + '<\/div><div class="kpi-label">Total Open<\/div><\/div><\/div>';html += '<table class="data-table" style="margin-top:0.75rem"><thead><tr><th>Client<\/th><th>Count<\/th><th>Sample Ticket<\/th><th><\/th><\/tr><\/thead><tbody>';data.by_client.forEach(c => {
+const t = c.tickets && c.tickets[0];html += '<tr><td>' + clientBadge(c.client_name) + '<\/td><td>' + (c.count || c.tickets?.length || 0) + '<\/td><td class="truncate">' + escapeHtml(t?.subject || '—') + '<\/td><td>' + linkIcon(t?.hubspot_ticket_url) + '<\/td><\/tr>';
+});html += '<\/tbody><\/table>';cardSuccess('overdue-tickets', html);
+} catch (e) { await handleCardError('overdue-tickets', 'get_standup_overdue_tickets', e, 'loadOverdueTickets'); }
+}
+async function loadRetainerBilling() {
+cardLoading('retainer-billing');try {
+const { data, error } = await sb.rpc('get_standup_retainer_billing');if (error) { await handleCardError('retainer-billing', 'get_standup_retainer_billing', error, 'loadRetainerBilling'); return; }
+if (!data || !data.billing || data.billing.length === 0) { cardEmpty('retainer-billing', 'No retainer data'); return; }
+let html = '<table class="data-table"><thead><tr><th>Client<\/th><th>Amount<\/th><th>Status<\/th><th>Planned<\/th><th>Done<\/th><\/tr><\/thead><tbody>';data.billing.forEach(b => {
+const cap = data.capped_status && data.capped_status.find(c => c.client_name === b.client_name);let statusHtml = statusBadge(b.invoice_status);if (cap) { statusHtml += ' <span class="badge badge-warning">' + cap.hours_used + '/' + cap.included_hours_per_month + 'h<\/span>'; }
+html += '<tr><td>' + clientBadge(b.client_name) + '<\/td><td>' + formatCurrency(b.retainer_amount) + '<\/td><td>' + statusHtml + '<\/td><td>' + (b.total_items_planned || 0) + '<\/td><td>' + (b.total_items_completed || 0) + '<\/td><\/tr>';
+});html += '<\/tbody><\/table>';cardSuccess('retainer-billing', html);
+} catch (e) { await handleCardError('retainer-billing', 'get_standup_retainer_billing', e, 'loadRetainerBilling'); }
+}
+async function loadEmailTriage() {
+cardLoading('email-triage');try {
+const { data, error } = await sb.rpc('get_standup_email_digest');if (error) { await handleCardError('email-triage', 'get_standup_email_digest', error, 'loadEmailTriage'); return; }
+if (!data || !data.stats) { cardEmpty('email-triage', 'No email data'); return; }
+const s = data.stats;let html = '<div class="kpi-row">';html += '<div class="kpi-metric"><div class="kpi-value">' + (s.total_processed || 0) + '<\/div><div class="kpi-label">Processed<\/div><\/div>';html += '<div class="kpi-metric"><div class="kpi-value">' + (s.auto_filed || 0) + '<\/div><div class="kpi-label">Auto-Filed<\/div><\/div>';html += '<div class="kpi-metric"><div class="kpi-value" style="color:' + (s.needs_action > 0 ? 'var(--warning)' : 'var(--success)') + '">' + (s.needs_action || 0) + '<\/div><div class="kpi-label">Needs Action<\/div><\/div>';html += '<div class="kpi-metric"><div class="kpi-value">' + (data.unprocessed || 0) + '<\/div><div class="kpi-label">Unprocessed<\/div><\/div>';html += '<\/div>';if (data.standup_queue && data.standup_queue.length > 0) {
+html += '<table class="data-table" style="margin-top:0.75rem"><thead><tr><th>Subject<\/th><th>From<\/th><th>Type<\/th><\/tr><\/thead><tbody>';data.standup_queue.forEach(e => {
+html += '<tr><td>' + escapeHtml(e.subject) + '<\/td><td>' + escapeHtml(e.sender_email || e.from) + '<\/td><td>' + statusBadge(e.email_type || e.type) + '<\/td><\/tr>';
+});html += '<\/tbody><\/table>';
+}
+cardSuccess('email-triage', html);
+} catch (e) { await handleCardError('email-triage', 'get_standup_email_digest', e, 'loadEmailTriage'); }
+}
+async function loadCarryForward() {
+cardLoading('carry-forward');try {
+const { data, error } = await sb.rpc('get_standup_carry_forward');if (error) { await handleCardError('carry-forward', 'get_standup_carry_forward', error, 'loadCarryForward'); return; }
+const items = data || [];if (items.length === 0) { cardEmpty('carry-forward', 'Nothing carried forward'); return; }
+updateCardCount('carry-forward', items.length);let html = '<table class="data-table"><thead><tr><th>Item<\/th><th>Type<\/th><th>Priority<\/th><\/tr><\/thead><tbody>';items.forEach(i => {
+html += '<tr><td>' + escapeHtml(i.title || i.detail) + '<\/td><td>' + statusBadge(i.note_type || i.type) + '<\/td><td>' + statusBadge(i.priority) + '<\/td><\/tr>';
+});html += '<\/tbody><\/table>';cardSuccess('carry-forward', html);
+} catch (e) { await handleCardError('carry-forward', 'get_standup_carry_forward', e, 'loadCarryForward'); }
+}
+async function loadStaleWaiting() {
+cardLoading('stale-waiting');try {
+const { data, error } = await sb.rpc('get_standup_stale_waiting');if (error) { await handleCardError('stale-waiting', 'get_standup_stale_waiting', error, 'loadStaleWaiting'); return; }
+const items = data || [];if (items.length === 0) { cardEmpty('stale-waiting', 'Nothing stale or waiting'); return; }
+updateCardCount('stale-waiting', items.length);let html = '<table class="data-table"><thead><tr><th>Item<\/th><th>Status<\/th><th>Age<\/th><\/tr><\/thead><tbody>';items.forEach(i => {
+html += '<tr><td>' + escapeHtml(i.title || i.subject) + '<\/td><td>' + statusBadge(i.status || i.stage) + '<\/td><td>' + staleBadge(i.days_stale || daysAgo(i.last_modified)) + '<\/td><\/tr>';
+});html += '<\/tbody><\/table>';cardSuccess('stale-waiting', html);
+} catch (e) { await handleCardError('stale-waiting', 'get_standup_stale_waiting', e, 'loadStaleWaiting'); }
+}
+async function loadOpenTickets() {
+cardLoading('open-tickets');try {
+const { data, error } = await sb.rpc('get_standup_open_tickets');if (error) { await handleCardError('open-tickets', 'get_standup_open_tickets', error, 'loadOpenTickets'); return; }
+if (!data || !data.tickets) { cardEmpty('open-tickets', 'No open tickets'); return; }
+const tickets = data.tickets;updateCardCount('open-tickets', data.total);let warn = '';const displayTickets = tickets.length > 500 ? (warn = '<div class="warning-banner">Showing first 500 of ' + tickets.length + ' tickets<\/div>', tickets.slice(0, 500)) : tickets;const columns = [
+{ key: 'subject', label: 'Subject', render: r => '<span class="truncate" style="display:inline-block">' + escapeHtml(r.subject) + '<\/span> ' + linkIcon(r.url) },
+{ key: 'client_name', label: 'Client', render: r => clientBadge(r.client_name) },
+{ key: 'stage', label: 'Stage', render: r => statusBadge(r.stage) },
+{ key: 'last_modified', label: 'Last Modified', render: r => formatDate(r.last_modified) },
+];const el = document.getElementById('open-tickets');if (warn) el.innerHTML = warn;renderSortableTable('open-tickets', columns, displayTickets, { defaultSort: 'last_modified', defaultSortDir: 'desc' });
+} catch (e) { await handleCardError('open-tickets', 'get_standup_open_tickets', e, 'loadOpenTickets'); }
+}
+async function loadTimeEntry(){cardEmpty('time-entry','Time entry coming in next deploy');}
 
 </script>
 <script>
-function loadSystem(ct){var sn=document.createElement('div');sn.className='sub-tabs';var tabs=[{id:'sys-cron',l:'Cron Jobs',fn:ldCron},{id:'sys-http',l:'HTTP Log',fn:ldHttp},{id:'sys-agents',l:'Agent Registry',fn:ldAgents},{id:'sys-brains',l:'Brains'},{id:'sys-config',l:'Configuration'}],cd=document.createElement('div');cd.className='sub-content';cd.id='sys-content';var ast='sys-cron';function rSub(){sn.innerHTML='';tabs.forEach(function(t){var tab=document.createElement('div');tab.className='sub-tab'+(t.id===ast?' active':'');tab.textContent=t.l;tab.onclick=function(){ast=t.id;rSub();cd.innerHTML='';if(t.fn)t.fn(cd);else cd.innerHTML='<div class="placeholder-pillar"><h2>'+escapeHtml(t.l)+'<\/h2><p>Coming in Phase 2<\/p><\/div>'};sn.appendChild(tab)})}rSub();ct.appendChild(sn);ct.appendChild(cd);ldCron(cd)}
-async function ldCron(ct){ct.innerHTML='<div style="padding:1rem"><div class="shimmer" style="width:80%"><\/div><div class="shimmer" style="width:60%"><\/div><\/div>';try{var r=await sb.rpc('get_cron_job_status');if(r.error)throw r.error;var jobs=r.data||[],ao=true;function render(){var f=ao?jobs.filter(function(j){return j.active}):jobs,h='<div class="filter-bar"><label class="toggle-wrap"><input type="checkbox" '+(ao?'checked':'')+' onchange="window._ct(this.checked)"> Active only<\/label><\/div><table class="data-table"><thead><tr><th>Job Name<\/th><th>Schedule<\/th><th>Active<\/th><\/tr><\/thead><tbody>';if(!f.length)h+='<tr><td colspan="3" style="text-align:center;color:var(--text-dim)">No jobs<\/td><\/tr>';else f.forEach(function(j){h+='<tr><td>'+escapeHtml(j.jobname)+'<\/td><td><code style="font-size:0.75rem;color:var(--text-muted)">'+escapeHtml(j.schedule)+'<\/code><\/td><td>'+(j.active?'<span class="badge badge-success">Active<\/span>':'<span class="badge badge-muted">Inactive<\/span>')+'<\/td><\/tr>'});h+='<\/tbody><\/table>';ct.innerHTML=h}window._ct=function(c){ao=c;render()};render()}catch(e){ct.innerHTML='<div class="card-error"><p>'+escapeHtml(e.message||'Failed')+'<\/p><\/div>'}}
-async function ldHttp(ct){ct.innerHTML='<div style="padding:1rem"><div class="shimmer" style="width:80%"><\/div><div class="shimmer" style="width:60%"><\/div><\/div>';try{var r=await sb.rpc('get_cron_http_responses',{p_limit:50});if(r.error)throw r.error;var logs=r.data||[],eo=false;function render(){var f=eo?logs.filter(function(l){return l.status_code!==200||l.timed_out||l.error_msg}):logs,h='<div class="filter-bar"><label class="toggle-wrap"><input type="checkbox" '+(eo?'checked':'')+' onchange="window._ht(this.checked)"> Errors only<\/label><\/div><table class="data-table"><thead><tr><th>ID<\/th><th>Status<\/th><th>Error<\/th><th>Time<\/th><\/tr><\/thead><tbody>';if(!f.length)h+='<tr><td colspan="4" style="text-align:center;color:var(--text-dim)">No entries<\/td><\/tr>';else f.forEach(function(l){var sh=l.timed_out?'<span class="badge badge-error">Timeout<\/span>':l.status_code?(l.status_code===200?'<span class="badge badge-success">200<\/span>':'<span class="badge badge-error">'+l.status_code+'<\/span>'):'<span class="badge badge-muted">—<\/span>';h+='<tr><td>'+l.id+'<\/td><td>'+sh+'<\/td><td>'+(l.error_msg?escapeHtml(l.error_msg.substring(0,80)):'—')+'<\/td><td style="white-space:nowrap">'+formatDate(l.created)+'<\/td><\/tr>'});h+='<\/tbody><\/table>';ct.innerHTML=h}window._ht=function(c){eo=c;render()};render()}catch(e){ct.innerHTML='<div class="card-error"><p>'+escapeHtml(e.message||'Failed')+'<\/p><\/div>'}}
-async function ldAgents(ct){ct.innerHTML='<div style="padding:1rem"><div class="shimmer" style="width:80%"><\/div><div class="shimmer" style="width:60%"><\/div><\/div>';try{var r=await sb.from('assistants').select('assistant_id,assistant_name,agent_type,brain,is_active,category').eq('is_active',true).order('assistant_name');if(r.error)throw r.error;var ag=r.data||[],types=[],seen={};ag.forEach(function(a){if(a.agent_type&&!seen[a.agent_type]){seen[a.agent_type]=1;types.push(a.agent_type)}});types.sort();var st='',tf='';function render(){var f=ag;if(st){var q=st.toLowerCase();f=f.filter(function(a){return(a.assistant_name||'').toLowerCase().indexOf(q)>=0||(a.assistant_id||'').toLowerCase().indexOf(q)>=0||(a.category||'').toLowerCase().indexOf(q)>=0})}if(tf)f=f.filter(function(a){return a.agent_type===tf});var h='<div class="filter-bar"><input type="text" placeholder="Search..." value="'+escapeHtml(st)+'" oninput="window._as(this.value)"><select onchange="window._af(this.value)"><option value="">All types<\/option>';types.forEach(function(t){h+='<option value="'+escapeHtml(t)+'"'+(tf===t?' selected':'')+'>'+escapeHtml(t)+'<\/option>'});h+='<\/select><span style="color:var(--text-muted);font-size:0.8rem">'+f.length+' agents<\/span><\/div><table class="data-table"><thead><tr><th>Agent<\/th><th>Type<\/th><th>Brain<\/th><th>Category<\/th><\/tr><\/thead><tbody>';f.forEach(function(a){h+='<tr><td><strong>'+escapeHtml(a.assistant_name)+'<\/strong><br><span style="font-size:0.7rem;color:var(--text-dim)">'+escapeHtml(a.assistant_id)+'<\/span><\/td><td>'+statusBadge(a.agent_type)+'<\/td><td>'+(a.brain?'<span class="badge badge-info">'+escapeHtml(a.brain)+'<\/span>':'<span class="badge badge-muted">—<\/span>')+'<\/td><td>'+escapeHtml(a.category||'—')+'<\/td><\/tr>'});h+='<\/tbody><\/table>';ct.innerHTML=h}window._as=function(v){st=v;render()};window._af=function(v){tf=v;render()};render()}catch(e){ct.innerHTML='<div class="card-error"><p>'+escapeHtml(e.message||'Failed')+'<\/p><\/div>'}}
+function loadSystem(container) {
+const subNav = document.createElement('div');subNav.className = 'sub-tabs';const tabs = [
+{ id: 'sys-cron', label: 'Cron Jobs', loader: loadCronJobs },
+{ id: 'sys-http', label: 'HTTP Log', loader: loadHttpLog },
+{ id: 'sys-agents', label: 'Agent Registry', loader: loadAgentRegistry },
+{ id: 'sys-brains', label: 'Brains', loader: null },
+{ id: 'sys-config', label: 'Configuration', loader: null },
+];const contentDiv = document.createElement('div');contentDiv.className = 'sub-content';contentDiv.id = 'sys-content';let activeSubTab = 'sys-cron';function renderSubTabs() {
+subNav.innerHTML = '';tabs.forEach(t => {
+const tab = document.createElement('div');tab.className = 'sub-tab' + (t.id === activeSubTab ? ' active' : '');tab.textContent = t.label;tab.onclick = () => {
+activeSubTab = t.id;renderSubTabs();contentDiv.innerHTML = '';if (t.loader) t.loader(contentDiv);else contentDiv.innerHTML = '<div class="placeholder-pillar"><h2>' + escapeHtml(t.label) + '<\/h2><p>Coming in Phase 2<\/p><\/div>';
+};subNav.appendChild(tab);
+});
+}
+renderSubTabs();container.appendChild(subNav);container.appendChild(contentDiv);loadCronJobs(contentDiv);
+}
+async function loadCronJobs(container) {
+container.innerHTML = '<div style="padding:1rem"><div class="shimmer" style="width:80%"><\/div><div class="shimmer" style="width:60%"><\/div><\/div>';try {
+const { data, error } = await sb.rpc('get_cron_job_status');if (error) throw error;const jobs = data || [];let showActiveOnly = true;function render() {
+const filtered = showActiveOnly ? jobs.filter(j => j.active) : jobs;let html = '<div class="filter-bar"><label class="toggle-wrap"><input type="checkbox" ' + (showActiveOnly ? 'checked' : '') + ' onchange="window._cronToggle(this.checked)"> Active only<\/label><\/div>';html += '<table class="data-table"><thead><tr><th>Job Name<\/th><th>Schedule<\/th><th>Active<\/th><\/tr><\/thead><tbody>';if (filtered.length === 0) {
+html += '<tr><td colspan="3" style="text-align:center;color:var(--text-dim)">No jobs<\/td><\/tr>';
+} else {
+filtered.forEach(j => {
+html += '<tr><td>' + escapeHtml(j.jobname) + '<\/td><td><code style="font-size:0.75rem;color:var(--text-muted)">' + escapeHtml(j.schedule) + '<\/code><\/td><td>' + (j.active ? '<span class="badge badge-success">Active<\/span>' : '<span class="badge badge-muted">Inactive<\/span>') + '<\/td><\/tr>';
+});
+}
+html += '<\/tbody><\/table>';container.innerHTML = html;
+}
+window._cronToggle = function(checked) { showActiveOnly = checked; render(); };render();
+} catch (e) {
+container.innerHTML = '<div class="card-error"><p>' + escapeHtml(e.message || 'Failed to load cron jobs') + '<\/p><\/div>';
+}
+}
+async function loadHttpLog(container) {
+container.innerHTML = '<div style="padding:1rem"><div class="shimmer" style="width:80%"><\/div><div class="shimmer" style="width:60%"><\/div><\/div>';try {
+const { data, error } = await sb.rpc('get_cron_http_responses', { p_limit: 50 });if (error) throw error;const logs = data || [];let errorsOnly = false;function render() {
+const filtered = errorsOnly ? logs.filter(l => l.status_code !== 200 || l.timed_out || l.error_msg) : logs;let html = '<div class="filter-bar"><label class="toggle-wrap"><input type="checkbox" ' + (errorsOnly ? 'checked' : '') + ' onchange="window._httpToggle(this.checked)"> Errors only<\/label><\/div>';html += '<table class="data-table"><thead><tr><th>ID<\/th><th>Status<\/th><th>Error<\/th><th>Time<\/th><\/tr><\/thead><tbody>';if (filtered.length === 0) {
+html += '<tr><td colspan="4" style="text-align:center;color:var(--text-dim)">No entries<\/td><\/tr>';
+} else {
+filtered.forEach(l => {
+const isErr = l.status_code !== 200 || l.timed_out || l.error_msg;const statusHtml = l.timed_out ? '<span class="badge badge-error">Timeout<\/span>' : l.status_code ? (l.status_code === 200 ? '<span class="badge badge-success">200<\/span>' : '<span class="badge badge-error">' + l.status_code + '<\/span>') : '<span class="badge badge-muted">—<\/span>';const errMsg = l.error_msg ? escapeHtml(l.error_msg.substring(0,80)) : '—';html += '<tr><td>' + l.id + '<\/td><td>' + statusHtml + '<\/td><td>' + errMsg + '<\/td><td style="white-space:nowrap">' + formatDate(l.created) + '<\/td><\/tr>';
+});
+}
+html += '<\/tbody><\/table>';container.innerHTML = html;
+}
+window._httpToggle = function(checked) { errorsOnly = checked; render(); };render();
+} catch (e) {
+container.innerHTML = '<div class="card-error"><p>' + escapeHtml(e.message || 'Failed to load HTTP log') + '<\/p><\/div>';
+}
+}
+async function loadAgentRegistry(container) {
+container.innerHTML = '<div style="padding:1rem"><div class="shimmer" style="width:80%"><\/div><div class="shimmer" style="width:60%"><\/div><\/div>';try {
+const { data, error } = await sb.from('assistants').select('assistant_id, assistant_name, agent_type, brain, is_active, category, functional_domains, last_active_at').eq('is_active', true).order('assistant_name');if (error) throw error;const agents = data || [];const types = [...new Set(agents.map(a => a.agent_type).filter(Boolean))].sort();let searchText = '';let typeFilter = '';function render() {
+let filtered = agents;if (searchText) {
+const q = searchText.toLowerCase();filtered = filtered.filter(a => (a.assistant_name || '').toLowerCase().includes(q) || (a.assistant_id || '').toLowerCase().includes(q) || (a.category || '').toLowerCase().includes(q));
+}
+if (typeFilter) {
+filtered = filtered.filter(a => a.agent_type === typeFilter);
+}
+let html = '<div class="filter-bar">';html += '<input type="text" placeholder="Search agents..." value="' + escapeHtml(searchText) + '" oninput="window._agentSearch(this.value)">';html += '<select onchange="window._agentTypeFilter(this.value)"><option value="">All types<\/option>';types.forEach(t => { html += '<option value="' + escapeHtml(t) + '"' + (typeFilter === t ? ' selected' : '') + '>' + escapeHtml(t) + '<\/option>'; });html += '<\/select>';html += '<span style="color:var(--text-muted);font-size:0.8rem">' + filtered.length + ' agents<\/span>';html += '<\/div>';html += '<table class="data-table"><thead><tr><th>Agent<\/th><th>Type<\/th><th>Brain<\/th><th>Category<\/th><\/tr><\/thead><tbody>';filtered.forEach(a => {
+html += '<tr><td><strong>' + escapeHtml(a.assistant_name) + '<\/strong><br><span style="font-size:0.7rem;color:var(--text-dim)">' + escapeHtml(a.assistant_id) + '<\/span><\/td><td>' + statusBadge(a.agent_type) + '<\/td><td>' + (a.brain ? '<span class="badge badge-info">' + escapeHtml(a.brain) + '<\/span>' : '<span class="badge badge-muted">—<\/span>') + '<\/td><td>' + escapeHtml(a.category || '—') + '<\/td><\/tr>';
+});html += '<\/tbody><\/table>';container.innerHTML = html;
+}
+window._agentSearch = function(val) { searchText = val; render(); };window._agentTypeFilter = function(val) { typeFilter = val; render(); };render();
+} catch (e) {
+container.innerHTML = '<div class="card-error"><p>' + escapeHtml(e.message || 'Failed to load agents') + '<\/p><\/div>';
+}
+}
 
 </script>
 </body>
