@@ -66,6 +66,7 @@ function showDashboard(user) {
   document.getElementById('dashboard').style.display = 'block';
   document.getElementById('user-email').textContent = user.email;
   renderNav();
+  if (typeof loadPreferences === 'function') loadPreferences();
   navigateTo('operations');
 }
 
