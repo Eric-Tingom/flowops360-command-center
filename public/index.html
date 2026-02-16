@@ -228,7 +228,7 @@ cardLoading('overdue-tickets');try {
 const { data, error } = await sb.rpc('get_standup_overdue_tickets');if (error) { await handleCardError('overdue-tickets', 'get_standup_overdue_tickets', error, 'loadOverdueTickets'); return; }
 if (!data || !data.by_client || data.by_client.length === 0) { cardEmpty('overdue-tickets', 'No overdue tickets'); return; }
 updateCardCount('overdue-tickets', data.total_overdue + ' overdue / ' + data.total_open + ' open');let html = '<div class="kpi-row"><div class="kpi-metric"><div class="kpi-value" style="color:var(--error)">' + data.total_overdue + '<\/div><div class="kpi-label">Overdue<\/div><\/div><div class="kpi-metric"><div class="kpi-value">' + data.total_open + '<\/div><div class="kpi-label">Total Open<\/div><\/div><\/div>';html += '<table class="data-table" style="margin-top:0.75rem"><thead><tr><th>Client<\/th><th>Count<\/th><th>Sample Ticket<\/th><th><\/th><\/tr><\/thead><tbody>';data.by_client.forEach(c => {
-const t = c.tickets && c.tickets[0];html += '<tr><td>' + clientBadge(c.client_name) + '<\/td><td>' + (c.count || c.tickets?.length || 0) + '<\/td><td class="truncate">' + escapeHtml(t?.subject || '—') + '<\/td><td>' + linkIcon(t?.hubspot_ticket_url) + '<\/td><\/tr>';
+const t = c.tickets && c.tickets[0];html += '<tr><td>' + clientBadge(c.client_name) + '<\/td><td>' + (c.count || c.tickets?.length || 0) + '<\/td><td class="truncate">' + escapeHtml(t?.subject || '\u2014') + '<\/td><td>' + linkIcon(t?.hubspot_ticket_url) + '<\/td><\/tr>';
 });html += '<\/tbody><\/table>';cardSuccess('overdue-tickets', html);
 } catch (e) { await handleCardError('overdue-tickets', 'get_standup_overdue_tickets', e, 'loadOverdueTickets'); }
 }
