@@ -1,188 +1,24 @@
 // FlowOps360 Command Center — Primitives
 // Utility functions used by all pillar modules
-
-function showToast(message, type = 'success') {
-  const el = document.createElement('div');
-  el.className = 'toast toast-' + type;
-  el.textContent = message;
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 3000);
-}
-
-function createCard(containerId, title, count) {
-  const card = document.createElement('div');
-  card.className = 'card';
-  card.id = 'card-' + containerId;
-  const hdr = document.createElement('div');
-  hdr.className = 'card-header';
-  hdr.innerHTML = '<h3>' + escapeHtml(title) + '</h3>' + (count != null ? '<span class="card-count">' + count + '</span>' : '');
-  const body = document.createElement('div');
-  body.className = 'card-body';
-  body.id = containerId;
-  card.appendChild(hdr);
-  card.appendChild(body);
-  return card;
-}
-
-function cardLoading(containerId) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  el.innerHTML = '<div class="shimmer" style="width:80%"></div><div class="shimmer" style="width:60%"></div><div class="shimmer" style="width:70%"></div>';
-}
-
-function cardSuccess(containerId, html) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  el.innerHTML = html;
-}
-
-function cardEmpty(containerId, message) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  el.innerHTML = '<div class="card-empty">' + escapeHtml(message || 'No data') + '</div>';
-}
-
-function cardError(containerId, message, retryFn) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  el.innerHTML = '<div class="card-error"><p>' + escapeHtml(message) + '</p>' +
-    (retryFn ? '<button class="btn-retry" onclick="' + retryFn + '()">Retry</button>' : '') + '</div>';
-}
-
-function updateCardCount(containerId, count) {
-  const card = document.getElementById('card-' + containerId);
-  if (!card) return;
-  const badge = card.querySelector('.card-count');
-  if (badge) badge.textContent = count;
-}
-
-function escapeHtml(str) {
-  if (str == null) return '';
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function formatDate(d) {
-  if (!d) return '\u2014';
-  const dt = new Date(d);
-  if (isNaN(dt)) return '\u2014';
-  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-function formatTime(d) {
-  if (!d) return '\u2014';
-  const dt = new Date(d);
-  if (isNaN(dt)) return '\u2014';
-  return dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Phoenix' });
-}
-
-function formatCurrency(n) {
-  if (n == null) return '\u2014';
-  return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-}
-
-function daysAgo(d) {
-  if (!d) return null;
-  const diff = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
-  return diff;
-}
-
-function staleBadge(days) {
-  if (days == null) return '';
-  if (days > 90) return '<span class="badge badge-error">' + days + 'd</span>';
-  if (days > 30) return '<span class="badge badge-warning">' + days + 'd</span>';
-  if (days > 14) return '<span class="badge badge-info">' + days + 'd</span>';
-  return '<span class="badge badge-muted">' + days + 'd</span>';
-}
-
-function statusBadge(status) {
-  const map = {
-    now: 'badge-error', in_review: 'badge-warning', next: 'badge-info',
-    new: 'badge-muted', waiting: 'badge-warning', in_queue: 'badge-info',
-    pending: 'badge-warning', healthy: 'badge-success', critical: 'badge-error',
-    stale: 'badge-warning', warning: 'badge-warning',
-  };
-  const cls = map[status] || 'badge-muted';
-  return '<span class="badge ' + cls + '">' + escapeHtml(status || '\u2014') + '</span>';
-}
-
-function clientBadge(name) {
-  if (!name) return '<span class="badge badge-muted">Unknown</span>';
-  return '<span class="badge badge-info">' + escapeHtml(name) + '</span>';
-}
-
-function linkIcon(url) {
-  if (!url) return '';
-  return '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener">&#8599;</a>';
-}
-
-function renderSortableTable(containerId, columns, rows, opts) {
-  opts = opts || {};
-  const pageSize = opts.pageSize || 25;
-  let currentPage = 0;
-  let sortCol = opts.defaultSort || null;
-  let sortDir = opts.defaultSortDir || 'asc';
-  let filterText = '';
-
-  function render() {
-    let filtered = rows;
-    if (filterText) {
-      const q = filterText.toLowerCase();
-      filtered = rows.filter(r => columns.some(c => String(r[c.key] || '').toLowerCase().includes(q)));
-    }
-    if (sortCol) {
-      filtered = [...filtered].sort((a, b) => {
-        let va = a[sortCol], vb = b[sortCol];
-        if (va == null) va = '';
-        if (vb == null) vb = '';
-        if (typeof va === 'number' && typeof vb === 'number') return sortDir === 'asc' ? va - vb : vb - va;
-        return sortDir === 'asc' ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
-      });
-    }
-    const total = filtered.length;
-    const pages = Math.ceil(total / pageSize) || 1;
-    if (currentPage >= pages) currentPage = pages - 1;
-    const start = currentPage * pageSize;
-    const pageRows = filtered.slice(start, start + pageSize);
-
-    let html = '';
-    if (rows.length > 10) {
-      html += '<div class="filter-bar"><input type="text" placeholder="Search..." value="' + escapeHtml(filterText) + '" onkeyup="window._tblFilter_' + containerId + '(this.value)"></div>';
-    }
-    html += '<table class="data-table"><thead><tr>';
-    columns.forEach(c => {
-      const isSorted = sortCol === c.key;
-      const arrow = isSorted ? (sortDir === 'asc' ? ' \u25B2' : ' \u25BC') : ' \u25B4';
-      html += '<th class="' + (isSorted ? 'sorted' : '') + '" onclick="window._tblSort_' + containerId + '(\'' + c.key + '\')">' + escapeHtml(c.label) + '<span class="sort-icon">' + arrow + '</span></th>';
-    });
-    html += '</tr></thead><tbody>';
-    if (pageRows.length === 0) {
-      html += '<tr><td colspan="' + columns.length + '" style="text-align:center;color:var(--text-dim);padding:1rem">No results</td></tr>';
-    } else {
-      pageRows.forEach(r => {
-        html += '<tr>';
-        columns.forEach(c => {
-          const val = c.render ? c.render(r) : escapeHtml(r[c.key]);
-          html += '<td>' + val + '</td>';
-        });
-        html += '</tr>';
-      });
-    }
-    html += '</tbody></table>';
-    if (total > pageSize) {
-      html += '<div class="pagination"><span>' + (start + 1) + '-' + Math.min(start + pageSize, total) + ' of ' + total + '</span><div>';
-      html += '<button ' + (currentPage === 0 ? 'disabled' : '') + ' onclick="window._tblPage_' + containerId + '(' + (currentPage - 1) + ')">Prev</button> ';
-      html += '<button ' + (currentPage >= pages - 1 ? 'disabled' : '') + ' onclick="window._tblPage_' + containerId + '(' + (currentPage + 1) + ')">Next</button>';
-      html += '</div></div>';
-    }
-    cardSuccess(containerId, html);
-  }
-
-  window['_tblSort_' + containerId] = function(col) {
-    if (sortCol === col) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
-    else { sortCol = col; sortDir = 'asc'; }
-    render();
-  };
-  window['_tblFilter_' + containerId] = function(val) { filterText = val; currentPage = 0; render(); };
-  window['_tblPage_' + containerId] = function(p) { currentPage = p; render(); };
-  render();
-}
+function showToast(message, type = 'success') { const el = document.createElement('div'); el.className = 'toast toast-' + type; el.textContent = message; document.body.appendChild(el); setTimeout(() => el.remove(), 3000); }
+function createCard(containerId, title, count) { const card = document.createElement('div'); card.className = 'card'; card.id = 'card-' + containerId; const hdr = document.createElement('div'); hdr.className = 'card-header'; hdr.innerHTML = '<h3>' + escapeHtml(title) + '</h3>' + (count != null ? '<span class="card-count">' + count + '</span>' : ''); const body = document.createElement('div'); body.className = 'card-body'; body.id = containerId; card.appendChild(hdr); card.appendChild(body); return card; }
+function cardLoading(id) { const el = document.getElementById(id); if (!el) return; el.innerHTML = '<div class="shimmer" style="width:80%"></div><div class="shimmer" style="width:60%"></div><div class="shimmer" style="width:70%"></div>'; }
+function cardSuccess(id, html) { const el = document.getElementById(id); if (!el) return; el.innerHTML = html; }
+function cardEmpty(id, message) { const el = document.getElementById(id); if (!el) return; el.innerHTML = '<div class="card-empty">' + escapeHtml(message || 'No data') + '</div>'; }
+function cardError(id, message, retryFn) { const el = document.getElementById(id); if (!el) return; el.innerHTML = '<div class="card-error"><p>' + escapeHtml(message) + '</p>' + (retryFn ? '<button class="btn-retry" onclick="' + retryFn + '()">Retry</button>' : '') + '</div>'; }
+function updateCardCount(id, count) { const card = document.getElementById('card-' + id); if (!card) return; const badge = card.querySelector('.card-count'); if (badge) badge.textContent = count; }
+function escapeHtml(str) { if (str == null) return ''; return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function formatDate(d) { if (!d) return '\u2014'; const dt = new Date(d); if (isNaN(dt)) return '\u2014'; return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+function formatTime(d) { if (!d) return '\u2014'; const dt = new Date(d); if (isNaN(dt)) return '\u2014'; return dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Phoenix' }); }
+function formatCurrency(n) { if (n == null) return '\u2014'; return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }); }
+function daysAgo(d) { if (!d) return null; return Math.floor((Date.now() - new Date(d).getTime()) / 86400000); }
+function staleBadge(days) { if (days == null) return ''; if (days > 90) return '<span class="badge badge-error">' + days + 'd</span>'; if (days > 30) return '<span class="badge badge-warning">' + days + 'd</span>'; if (days > 14) return '<span class="badge badge-info">' + days + 'd</span>'; return '<span class="badge badge-muted">' + days + 'd</span>'; }
+function statusBadge(status) { const map = { now: 'badge-error', in_review: 'badge-warning', next: 'badge-info', new: 'badge-muted', waiting: 'badge-warning', in_queue: 'badge-info', pending: 'badge-warning', healthy: 'badge-success', critical: 'badge-error', stale: 'badge-warning', warning: 'badge-warning' }; return '<span class="badge ' + (map[status] || 'badge-muted') + '">' + escapeHtml(status || '\u2014') + '</span>'; }
+function clientBadge(name) { if (!name) return '<span class="badge badge-muted">Unknown</span>'; return '<span class="badge badge-info">' + escapeHtml(name) + '</span>'; }
+function linkIcon(url) { if (!url) return ''; return '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener">&#8599;</a>'; }
+function renderSortableTable(cid, columns, rows, opts) { opts = opts || {}; const ps = opts.pageSize || 25; let cp = 0, sc = opts.defaultSort || null, sd = opts.defaultSortDir || 'asc', ft = ''; function render() { let f = rows; if (ft) { const q = ft.toLowerCase(); f = rows.filter(r => columns.some(c => String(r[c.key] || '').toLowerCase().includes(q))); } if (sc) { f = [...f].sort((a, b) => { let va = a[sc] ?? '', vb = b[sc] ?? ''; if (typeof va === 'number' && typeof vb === 'number') return sd === 'asc' ? va - vb : vb - va; return sd === 'asc' ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va)); }); } const tot = f.length, pgs = Math.ceil(tot / ps) || 1; if (cp >= pgs) cp = pgs - 1; const st = cp * ps, pr = f.slice(st, st + ps); let h = ''; if (rows.length > 10) h += '<div class="filter-bar"><input type="text" placeholder="Search..." value="' + escapeHtml(ft) + '" onkeyup="window._tblFilter_' + cid + '(this.value)"></div>'; h += '<table class="data-table"><thead><tr>'; columns.forEach(c => { const is = sc === c.key; h += '<th class="' + (is ? 'sorted' : '') + '" onclick="window._tblSort_' + cid + '(\'' + c.key + '\')">' + escapeHtml(c.label) + '<span class="sort-icon">' + (is ? (sd === 'asc' ? ' \u25B2' : ' \u25BC') : ' \u25B4') + '</span></th>'; }); h += '</tr></thead><tbody>'; if (!pr.length) h += '<tr><td colspan="' + columns.length + '" style="text-align:center;color:var(--text-dim);padding:1rem">No results</td></tr>'; else pr.forEach(r => { h += '<tr>'; columns.forEach(c => h += '<td>' + (c.render ? c.render(r) : escapeHtml(r[c.key])) + '</td>'); h += '</tr>'; }); h += '</tbody></table>'; if (tot > ps) { h += '<div class="pagination"><span>' + (st + 1) + '-' + Math.min(st + ps, tot) + ' of ' + tot + '</span><div>'; h += '<button ' + (cp === 0 ? 'disabled' : '') + ' onclick="window._tblPage_' + cid + '(' + (cp - 1) + ')">Prev</button> '; h += '<button ' + (cp >= pgs - 1 ? 'disabled' : '') + ' onclick="window._tblPage_' + cid + '(' + (cp + 1) + ')">Next</button></div></div>'; } cardSuccess(cid, h); } window['_tblSort_' + cid] = function(col) { if (sc === col) sd = sd === 'asc' ? 'desc' : 'asc'; else { sc = col; sd = 'asc'; } render(); }; window['_tblFilter_' + cid] = function(val) { ft = val; cp = 0; render(); }; window['_tblPage_' + cid] = function(p) { cp = p; render(); }; render(); }
+function linkWrap(text, url) { if (!url) return escapeHtml(text || '\u2014'); return '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener" style="color:var(--accent)">' + escapeHtml(text || '\u2014') + '</a>'; }
+function truncate(str, max) { if (!str) return ''; return str.length > max ? str.slice(0, max) + '\u2026' : str; }
+function relativeTime(ts) { if (!ts) return '\u2014'; const diff = Date.now() - new Date(ts).getTime(); const mins = Math.floor(diff / 60000); if (mins < 60) return mins + 'm ago'; const hrs = Math.floor(mins / 60); if (hrs < 24) return hrs + 'h ago'; return Math.floor(hrs / 24) + 'd ago'; }
+function normalizeClientName(name) { if (!name) return 'Unknown'; if (name.includes('Heritage') || name.includes('Maridea')) return 'Maridea (fka Heritage)'; return name; }
+function opsSection(label, innerHtml) { if (!innerHtml) return ''; return '<div class="ops-section" style="padding:0 1.5rem 0.75rem"><div class="ops-section-header" style="padding:0.5rem 0;font-size:0.85rem;font-weight:600;color:var(--text-muted)">' + escapeHtml(label) + '</div><div class="card" style="overflow:hidden"><div class="card-body">' + innerHtml + '</div></div></div>'; }
