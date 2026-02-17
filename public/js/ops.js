@@ -1,146 +1,101 @@
-// FlowOps360 Command Center — Operations Pillar
+// FlowOps360 Command Center — Operations Pillar Orchestrator
+// Single RPC call -> accordion tiers -> dispatches to ops-t{1-4}.js renderers
+// Architecture: ops.js never renders section content — tier modules do that
+// Convention: each tier module registers window.renderOpsSection_{section_key}
+
 function loadOperations(container) {
-  const grid = document.createElement('div');
-  grid.className = 'card-grid';
-  const cards = [
-    { id: 'now-items', title: 'Now Items', loader: loadNowItems },
-    { id: 'todays-calendar', title: "Today's Calendar", loader: loadTodaysCalendar },
-    { id: 'overdue-tickets', title: 'Overdue Tickets', loader: loadOverdueTickets },
-    { id: 'retainer-billing', title: 'Retainer Billing', loader: loadRetainerBilling },
-    { id: 'email-triage', title: 'Email Triage', loader: loadEmailTriage },
-    { id: 'carry-forward', title: 'Carry Forward', loader: loadCarryForward },
-    { id: 'stale-waiting', title: 'Stale / Waiting', loader: loadStaleWaiting },
-    { id: 'open-tickets', title: 'Open Tickets', loader: loadOpenTickets },
-    { id: 'time-entry', title: 'Time Entry', loader: loadTimeEntry },
-  ];
-  cards.forEach(c => { grid.appendChild(createCard(c.id, c.title)); c.loader(); });
-  container.appendChild(grid);
+  container.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.id = 'ops-pillar';
+  wrap.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--text-dim)"><div class="shimmer" style="width:60%;margin:0 auto 0.5rem"></div><div class="shimmer" style="width:40%;margin:0 auto 0.5rem"></div><div class="shimmer" style="width:50%;margin:0 auto"></div></div>';
+  container.appendChild(wrap);
+  fetchStandupBriefing(wrap);
 }
-async function loadNowItems() {
-  cardLoading('now-items');
+
+async function fetchStandupBriefing(wrap) {
   try {
-    const { data, error } = await sb.rpc('get_standup_now_items');
-    if (error) { await handleCardError('now-items', 'get_standup_now_items', error, 'loadNowItems'); return; }
-    const items = data || [];
-    if (items.length === 0) { cardEmpty('now-items', 'No active now items'); return; }
-    updateCardCount('now-items', items.length);
-    let html = '<table class="data-table"><thead><tr><th>Task</th><th>Client</th><th>Due</th><th></th></tr></thead><tbody>';
-    items.forEach(i => { html += '<tr><td>' + escapeHtml(i.title) + '</td><td>' + clientBadge(i.client_name) + '</td><td>' + formatDate(i.due_date) + '</td><td>' + linkIcon(i.hubspot_ticket_url) + '</td></tr>'; });
-    html += '</tbody></table>';
-    cardSuccess('now-items', html);
-  } catch (e) { await handleCardError('now-items', 'get_standup_now_items', e, 'loadNowItems'); }
+    const { data, error } = await sb.rpc('get_standup_briefing_safe');
+    if (error) throw error;
+    if (!data) throw new Error('No data returned');
+    if (data.fatal) { wrap.innerHTML = '<div class="card-error"><p>Standup RPC fatal: ' + escapeHtml(data.error || 'Unknown') + '</p></div>'; return; }
+    window._opsData = data;
+    renderOpsPillar(wrap, data);
+  } catch (e) {
+    console.error('[Ops] get_standup_briefing_safe failed:', e);
+    wrap.innerHTML = '<div class="card-error"><p>Failed to load operations: ' + escapeHtml(e.message) + '</p><button class="btn-retry" onclick="loadOperations(document.getElementById(\'pillar-content\'))">Retry</button></div>';
+  }
 }
-async function loadTodaysCalendar() {
-  cardLoading('todays-calendar');
-  try {
-    const { data, error } = await sb.rpc('get_standup_todays_calendar');
-    if (error) { await handleCardError('todays-calendar', 'get_standup_todays_calendar', error, 'loadTodaysCalendar'); return; }
-    const items = data || [];
-    if (items.length === 0) { cardEmpty('todays-calendar', 'No meetings today'); return; }
-    updateCardCount('todays-calendar', items.length);
-    let html = '<table class="data-table"><thead><tr><th>Time</th><th>Meeting</th><th>Client</th></tr></thead><tbody>';
-    items.forEach(i => { html += '<tr><td style="white-space:nowrap">' + formatTime(i.start_time) + '</td><td>' + escapeHtml(i.subject) + '</td><td>' + clientBadge(i.client_name) + '</td></tr>'; });
-    html += '</tbody></table>';
-    cardSuccess('todays-calendar', html);
-  } catch (e) { await handleCardError('todays-calendar', 'get_standup_todays_calendar', e, 'loadTodaysCalendar'); }
-}
-async function loadOverdueTickets() {
-  cardLoading('overdue-tickets');
-  try {
-    const { data, error } = await sb.rpc('get_standup_overdue_tickets');
-    if (error) { await handleCardError('overdue-tickets', 'get_standup_overdue_tickets', error, 'loadOverdueTickets'); return; }
-    if (!data || !data.by_client || data.by_client.length === 0) { cardEmpty('overdue-tickets', 'No overdue tickets'); return; }
-    updateCardCount('overdue-tickets', data.total_overdue + ' overdue / ' + data.total_open + ' open');
-    let html = '<div class="kpi-row"><div class="kpi-metric"><div class="kpi-value" style="color:var(--error)">' + data.total_overdue + '</div><div class="kpi-label">Overdue</div></div><div class="kpi-metric"><div class="kpi-value">' + data.total_open + '</div><div class="kpi-label">Total Open</div></div></div>';
-    html += '<table class="data-table" style="margin-top:0.75rem"><thead><tr><th>Client</th><th>Count</th><th>Sample Ticket</th><th></th></tr></thead><tbody>';
-    data.by_client.forEach(c => { const t = c.tickets && c.tickets[0]; html += '<tr><td>' + clientBadge(c.client_name) + '</td><td>' + (c.count || c.tickets?.length || 0) + '</td><td class="truncate">' + escapeHtml(t?.subject || '\u2014') + '</td><td>' + linkIcon(t?.hubspot_ticket_url) + '</td></tr>'; });
-    html += '</tbody></table>';
-    cardSuccess('overdue-tickets', html);
-  } catch (e) { await handleCardError('overdue-tickets', 'get_standup_overdue_tickets', e, 'loadOverdueTickets'); }
-}
-async function loadRetainerBilling() {
-  cardLoading('retainer-billing');
-  try {
-    const { data, error } = await sb.rpc('get_standup_retainer_billing');
-    if (error) { await handleCardError('retainer-billing', 'get_standup_retainer_billing', error, 'loadRetainerBilling'); return; }
-    if (!data || !data.billing || data.billing.length === 0) { cardEmpty('retainer-billing', 'No retainer data'); return; }
-    let html = '<table class="data-table"><thead><tr><th>Client</th><th>Amount</th><th>Status</th><th>Planned</th><th>Done</th></tr></thead><tbody>';
-    data.billing.forEach(b => {
-      const cap = data.capped_status && data.capped_status.find(c => c.client_name === b.client_name);
-      let statusHtml = statusBadge(b.invoice_status);
-      if (cap) statusHtml += ' <span class="badge badge-warning">' + cap.hours_used + '/' + cap.included_hours_per_month + 'h</span>';
-      html += '<tr><td>' + clientBadge(b.client_name) + '</td><td>' + formatCurrency(b.retainer_amount) + '</td><td>' + statusHtml + '</td><td>' + (b.total_items_planned || 0) + '</td><td>' + (b.total_items_completed || 0) + '</td></tr>';
+
+function renderOpsPillar(wrap, data) {
+  const sc = data.section_config || [];
+  const rc = data.rendering_templates?.standup_briefing?.rendering_config || {};
+  const dr = rc.display_rules || {};
+  const sd = buildSectionDataMap(data);
+  const tierEmoji = { 1: '\uD83D\uDCB0', 2: '\uD83C\uDFAF', 3: '\uD83D\uDEE1\uFE0F', 4: '\uD83D\uDCCB' };
+  const tierMap = {};
+  sc.forEach(s => { if (!tierMap[s.tier]) tierMap[s.tier] = { tier: s.tier, label: s.tier_label, sections: [] }; tierMap[s.tier].sections.push(s); });
+  const tiers = Object.values(tierMap).sort((a, b) => a.tier - b.tier);
+  let html = '';
+  if (data.generated_at) {
+    const gen = new Date(data.generated_at);
+    html += '<div style="padding:0.75rem 1.5rem;font-size:0.75rem;color:var(--text-dim);display:flex;justify-content:space-between;align-items:center"><span>Operations Briefing \u2014 ' + escapeHtml(data.day_of_week || '') + ', ' + formatDate(data.date) + '</span><span>Last refreshed: ' + gen.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Phoenix' }) + ' MST</span></div>';
+  }
+  if (data.carry_forward && data.carry_forward.length > 0) html += renderCarryForward(data.carry_forward);
+  tiers.forEach(t => {
+    const nonEmpty = t.sections.filter(s => !isSectionEmpty(s.section_key, sd)).length;
+    const emoji = tierEmoji[t.tier] || '\uD83D\uDCCB';
+    const tierLabel = (rc.tiers && rc.tiers.find(rt => rt.tier === t.tier)?.label) || t.label;
+    const isExpanded = nonEmpty > 0;
+    const tierId = 'tier-' + t.tier;
+    html += '<div class="ops-tier" id="' + tierId + '">';
+    html += '<div class="ops-tier-header" onclick="toggleTier(\'' + tierId + '\')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1.5rem;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);margin:0.5rem 1.5rem">';
+    html += '<span style="font-weight:600;font-size:0.9rem">' + emoji + ' TIER ' + t.tier + ': ' + escapeHtml(tierLabel).toUpperCase() + '</span>';
+    html += '<span style="display:flex;align-items:center;gap:0.75rem">';
+    html += nonEmpty > 0 ? '<span class="badge badge-info">' + nonEmpty + ' active</span>' : '<span class="badge badge-muted">all clear</span>';
+    html += '<span class="tier-chevron" style="transition:transform 0.2s;display:inline-block;' + (isExpanded ? '' : 'transform:rotate(-90deg)') + '">\u25BC</span>';
+    html += '</span></div>';
+    html += '<div class="ops-tier-body" style="' + (isExpanded ? '' : 'display:none') + '">';
+    t.sections.forEach(s => {
+      if (s.skip_if_empty && isSectionEmpty(s.section_key, sd)) return;
+      const renderer = window['renderOpsSection_' + s.section_key];
+      if (typeof renderer === 'function') { const inner = renderer(sd[s.section_key], data.constants || {}, dr); if (inner) html += opsSection(s.display_label, inner); }
+      else console.warn('[Ops] No renderer found for:', s.section_key);
     });
-    html += '</tbody></table>';
-    cardSuccess('retainer-billing', html);
-  } catch (e) { await handleCardError('retainer-billing', 'get_standup_retainer_billing', e, 'loadRetainerBilling'); }
+    html += '</div></div>';
+  });
+  wrap.innerHTML = html;
 }
-async function loadEmailTriage() {
-  cardLoading('email-triage');
-  try {
-    const { data, error } = await sb.rpc('get_standup_email_digest');
-    if (error) { await handleCardError('email-triage', 'get_standup_email_digest', error, 'loadEmailTriage'); return; }
-    if (!data || !data.stats) { cardEmpty('email-triage', 'No email data'); return; }
-    const s = data.stats;
-    let html = '<div class="kpi-row">';
-    html += '<div class="kpi-metric"><div class="kpi-value">' + (s.total_processed || 0) + '</div><div class="kpi-label">Processed</div></div>';
-    html += '<div class="kpi-metric"><div class="kpi-value">' + (s.auto_filed || 0) + '</div><div class="kpi-label">Auto-Filed</div></div>';
-    html += '<div class="kpi-metric"><div class="kpi-value" style="color:' + (s.needs_action > 0 ? 'var(--warning)' : 'var(--success)') + '">' + (s.needs_action || 0) + '</div><div class="kpi-label">Needs Action</div></div>';
-    html += '<div class="kpi-metric"><div class="kpi-value">' + (data.unprocessed || 0) + '</div><div class="kpi-label">Unprocessed</div></div>';
-    html += '</div>';
-    if (data.standup_queue && data.standup_queue.length > 0) {
-      html += '<table class="data-table" style="margin-top:0.75rem"><thead><tr><th>Subject</th><th>From</th><th>Type</th></tr></thead><tbody>';
-      data.standup_queue.forEach(e => { html += '<tr><td>' + escapeHtml(e.subject) + '</td><td>' + escapeHtml(e.sender_email || e.from) + '</td><td>' + statusBadge(e.email_type || e.type) + '</td></tr>'; });
-      html += '</tbody></table>';
-    }
-    cardSuccess('email-triage', html);
-  } catch (e) { await handleCardError('email-triage', 'get_standup_email_digest', e, 'loadEmailTriage'); }
+function toggleTier(tierId) {
+  const el = document.getElementById(tierId); if (!el) return;
+  const body = el.querySelector('.ops-tier-body'); const chevron = el.querySelector('.tier-chevron'); if (!body) return;
+  const hidden = body.style.display === 'none';
+  body.style.display = hidden ? '' : 'none';
+  if (chevron) chevron.style.transform = hidden ? '' : 'rotate(-90deg)';
 }
-async function loadCarryForward() {
-  cardLoading('carry-forward');
-  try {
-    const { data, error } = await sb.rpc('get_standup_carry_forward');
-    if (error) { await handleCardError('carry-forward', 'get_standup_carry_forward', error, 'loadCarryForward'); return; }
-    const items = data || [];
-    if (items.length === 0) { cardEmpty('carry-forward', 'Nothing carried forward'); return; }
-    updateCardCount('carry-forward', items.length);
-    let html = '<table class="data-table"><thead><tr><th>Item</th><th>Type</th><th>Priority</th></tr></thead><tbody>';
-    items.forEach(i => { html += '<tr><td>' + escapeHtml(i.title || i.detail) + '</td><td>' + statusBadge(i.note_type || i.type) + '</td><td>' + statusBadge(i.priority) + '</td></tr>'; });
-    html += '</tbody></table>';
-    cardSuccess('carry-forward', html);
-  } catch (e) { await handleCardError('carry-forward', 'get_standup_carry_forward', e, 'loadCarryForward'); }
+function buildSectionDataMap(data) {
+  const t1 = data.tier1_money_in_motion || {}, t2 = data.tier2_revenue_pipeline || {}, t3 = data.tier3_revenue_protection || {}, t4 = data.tier4_operational || {};
+  return { revenue_pipeline: t1.revenue_pipeline, build_queue: t1.build_queue, retainer_billing: t1.retainer_billing, follow_ups_needed: t1.follow_ups, outreach_pending: t2.outreach_pending, engagement_pending: t2.engagement_pending, content_today: t2.content_today, content_pending_approval: t2.content_pending_approval, content_icp_coverage: t2.icp_coverage, lead_pipeline: t2.lead_pipeline, overdue_tickets: t3.overdue_tickets, client_health: t3.client_health, retainer_items: t3.retainer_items, now_items: t3.now_items, stale_waiting: t3.stale_waiting, new_tickets: t3.new_tickets, todays_calendar: t4.todays_calendar, tomorrows_calendar: t4.tomorrows_calendar, email_digest: t4.email_digest, automation_errors: t4.automation_errors, data_quality: t4.data_quality, alignment_check: t4.alignment_check };
 }
-async function loadStaleWaiting() {
-  cardLoading('stale-waiting');
-  try {
-    const { data, error } = await sb.rpc('get_standup_stale_waiting');
-    if (error) { await handleCardError('stale-waiting', 'get_standup_stale_waiting', error, 'loadStaleWaiting'); return; }
-    const items = data || [];
-    if (items.length === 0) { cardEmpty('stale-waiting', 'Nothing stale or waiting'); return; }
-    updateCardCount('stale-waiting', items.length);
-    let html = '<table class="data-table"><thead><tr><th>Item</th><th>Status</th><th>Age</th></tr></thead><tbody>';
-    items.forEach(i => { html += '<tr><td>' + escapeHtml(i.title || i.subject) + '</td><td>' + statusBadge(i.status || i.stage) + '</td><td>' + staleBadge(i.days_stale || daysAgo(i.last_modified)) + '</td></tr>'; });
-    html += '</tbody></table>';
-    cardSuccess('stale-waiting', html);
-  } catch (e) { await handleCardError('stale-waiting', 'get_standup_stale_waiting', e, 'loadStaleWaiting'); }
+function isSectionEmpty(key, sd) {
+  const d = sd[key]; if (d == null) return true;
+  if (Array.isArray(d)) return d.length === 0;
+  if (typeof d === 'object') {
+    if (key === 'overdue_tickets') return !d.by_client || d.by_client.length === 0;
+    if (key === 'new_tickets') return (!d.erics_queue || d.erics_queue.length === 0) && (!d.clients_court || d.clients_court.length === 0);
+    if (key === 'retainer_billing') return !d.billing || d.billing.length === 0;
+    if (key === 'email_digest') return !d.stats;
+    if (key === 'data_quality') return false;
+    if (key === 'automation_errors') return (!d.recent_errors || d.recent_errors.length === 0) && (!d.email_processor_health || d.email_processor_health.length === 0);
+    if (key === 'alignment_check') return d.status === 'clean';
+    if (key === 'build_queue') return false;
+    if (key === 'revenue_pipeline') return !d.deals || d.deals.length === 0;
+    const vals = Object.values(d); return vals.every(v => v == null || (Array.isArray(v) && v.length === 0) || v === '0' || v === 0);
+  }
+  return !d;
 }
-async function loadOpenTickets() {
-  cardLoading('open-tickets');
-  try {
-    const { data, error } = await sb.rpc('get_standup_open_tickets');
-    if (error) { await handleCardError('open-tickets', 'get_standup_open_tickets', error, 'loadOpenTickets'); return; }
-    if (!data || !data.tickets) { cardEmpty('open-tickets', 'No open tickets'); return; }
-    const tickets = data.tickets;
-    updateCardCount('open-tickets', data.total);
-    const columns = [
-      { key: 'subject', label: 'Subject', render: r => '<span class="truncate" style="display:inline-block">' + escapeHtml(r.subject) + '</span> ' + linkIcon(r.url) },
-      { key: 'client_name', label: 'Client', render: r => clientBadge(r.client_name) },
-      { key: 'stage', label: 'Stage', render: r => statusBadge(r.stage) },
-      { key: 'last_modified', label: 'Last Modified', render: r => formatDate(r.last_modified) },
-    ];
-    renderSortableTable('open-tickets', columns, tickets.slice(0, 500), { defaultSort: 'last_modified', defaultSortDir: 'desc' });
-  } catch (e) { await handleCardError('open-tickets', 'get_standup_open_tickets', e, 'loadOpenTickets'); }
-}
-async function loadTimeEntry() {
-  cardEmpty('time-entry', 'Time entry coming in next deploy');
+function renderCarryForward(items) {
+  let html = '<table class="data-table"><thead><tr><th>Item</th><th>Type</th><th>Priority</th></tr></thead><tbody>';
+  items.forEach(i => { html += '<tr><td>' + escapeHtml(i.title || i.detail || i.note) + '</td><td>' + statusBadge(i.note_type || i.type) + '</td><td>' + statusBadge(i.priority) + '</td></tr>'; });
+  html += '</tbody></table>';
+  return opsSection('\uD83D\uDCCC Carry Forward', html);
 }
