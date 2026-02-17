@@ -5,13 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FlowOps360 Command Center</title>
 <style>
-:root {
-  --bg: #0f172a; --bg-card: #1e293b; --bg-hover: #334155;
-  --text: #f1f5f9; --text-muted: #94a3b8; --text-dim: #64748b;
-  --accent: #3b82f6; --accent-hover: #2563eb;
-  --success: #22c55e; --warning: #f59e0b; --error: #ef4444;
-  --border: #334155; --radius: 8px; --card-min-width: 400px;
-}
+:root { --bg: #0f172a; --bg-card: #1e293b; --bg-hover: #334155; --text: #f1f5f9; --text-muted: #94a3b8; --text-dim: #64748b; --accent: #3b82f6; --accent-hover: #2563eb; --success: #22c55e; --warning: #f59e0b; --error: #ef4444; --border: #334155; --radius: 8px; --card-min-width: 400px; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: underline; }
@@ -69,6 +63,8 @@ a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: un
 .kpi-label { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; }
 .filter-bar { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; }
 .filter-bar input, .filter-bar select { padding: 0.35rem 0.6rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 0.8rem; }
+.toggle-wrap { display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; color: var(--text-muted); }
+.toggle-wrap input[type=checkbox] { accent-color: var(--accent); }
 .pagination { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; font-size: 0.8rem; color: var(--text-muted); }
 .pagination button { padding: 0.25rem 0.6rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); cursor: pointer; font-size: 0.8rem; }
 .pagination button:disabled { opacity: 0.3; cursor: not-allowed; }
@@ -95,8 +91,6 @@ a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: un
 .settings-toggle-group button.active { background: var(--accent); color: white; }
 .btn-icon { padding: 0.35rem 0.6rem; font-size: 1rem; border: 1px solid var(--border); background: transparent; color: var(--text-muted); border-radius: 8px; cursor: pointer; line-height: 1; }
 .btn-icon:hover { background: var(--bg-hover); color: var(--text); }
-.toggle-wrap { display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; color: var(--text-muted); }
-.toggle-wrap input[type=checkbox] { accent-color: var(--accent); }
 </style>
 </head>
 <body>
