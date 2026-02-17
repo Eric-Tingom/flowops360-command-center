@@ -1,1 +1,5 @@
-{"name":"flowops360-command-center","version":"1.0.0","private":true}
+{
+  "name": "flowops360-command-center",
+  "version": "2.0.0",
+  "private": true
+}
